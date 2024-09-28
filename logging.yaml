@@ -1,0 +1,31 @@
+version: 1
+disable_existing_loggers: False
+formatters:
+   simple:
+      format: "[%(asctime)s] [%(levelname)-8s] %(message)s"
+   standard:
+      format: "[%(asctime)s] [%(levelname)-8s] %(message)-100s (%(name)s.%(funcName)s)"
+   
+handlers:
+    console:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: standard
+        stream: ext://sys.stderr
+     
+    console_simple:
+        class: logging.StreamHandler
+        level: DEBUG
+        formatter: simple
+        stream: ext://sys.stderr   
+
+
+loggers:
+   requests:
+      level: INFO
+   urllib3:
+     level: WARN
+      
+root:
+    level: INFO
+    handlers: [console_simple]
