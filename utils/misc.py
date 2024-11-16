@@ -4,8 +4,9 @@ import os
 
 import yaml
 from flask import current_app as app
+from sqlalchemy import select
 
-from databases import Camera, ParentChildDetected
+from databases import Camera, ParentChildDetected, db
 
 def configure_logging(config_path='logging.yaml', default_level=logging.INFO, env_key='INFER_LOG_CONFIG'):
     path = config_path
@@ -30,14 +31,6 @@ def configure_logging(config_path='logging.yaml', default_level=logging.INFO, en
         logging.error('Failed to load logging configuration file. Using basicConfig')
         logging.basicConfig(level=default_level)
         logging.getLogger().setLevel(logging.DEBUG)
-
-def video_is_primary(video):
-    camera = Camera.query.filter_by(id=video.camera_id).one_or_none()
-    parent = ParentChildDetected.query.filter_by(child=video.entry_id).one_or_none()
-    if not parent and camera.is_primary:
-        return True
-    
-    return False
 
 def has_all_keys(data, keys):
     return all([key in data for key in keys])

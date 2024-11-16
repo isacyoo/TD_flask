@@ -1,10 +1,10 @@
 from flask import Blueprint, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
-
+from sqlalchemy import select
 
 from utils.auth import both_web_and_api
-from databases import Location, serialize
+from databases import Location, serialize, db
 
 location = Blueprint("location", "__name__")
 
@@ -12,7 +12,9 @@ location = Blueprint("location", "__name__")
 @both_web_and_api
 def get_locations() -> Response:
     keys = ["id", "name"]
-    return serialize(Location.query.filter_by(user_id=current_user.id).all(), keys)   
+    locations = db.session.execute(
+        select(Location).where(Location.user_id==current_user.id)).scalars().all()
+    return serialize(locations, keys)   
     
 @location.get("/location_id/<name>")
 @both_web_and_api
@@ -25,4 +27,8 @@ def get_location_id(name) -> Response:
     return serialize(location, keys)   
     
 def grab_location_id(user_id, name):
-    return Location.query.filter(Location.user_id==user_id, Location.name==name).limit(1)
+    location_id = db.session.execute(
+        select(Location.id).where(
+            Location.user_id==user_id,
+            Location.name==name)).scalar_one_or_none()
+    return location_id

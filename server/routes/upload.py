@@ -35,7 +35,9 @@ def upload_videos() -> Response:
         if not location:
             return jsonify({"msg": f"Location name {data['location_name']} is not valid"}), 400
         
-        all_cameras = Camera.query.filter_by(location_id=location.id).all()
+        all_cameras = db.session.execute(
+            select(Camera).where(Camera.location_id==location.id)).scalars().all()
+        
         if not all_cameras:
             return jsonify({"msg": f"Camera not found for location {data['location_name']}"}), 404
         
@@ -56,16 +58,13 @@ def upload_videos() -> Response:
         if not is_operational:
             app.logger.info(f"Location {location.name} is not operational at {current_time}")
             return jsonify({"msg": f"Location {location.name} is not operational at {current_time}"}), 400
-
-        query = select(Video.id)
-        query = query.where(Video.camera_id.in_([camera.id for camera in all_cameras]))
-        query = query.where(Video.person_id == data['person_id'])
-        query = query.where(Video.entered_at < current_time)
-        query = query.where(Video.entered_at > current_time - timedelta(seconds=CHILD_THRESHOLD))
-        query = query.where(Video.entry_id != data['entry_id'])
-        query = query.limit(1)
+        duplicates = db.session.execute(
+            select(Video.id).where(
+                Video.person_id==data['person_id'],
+                Video.entered_at==current_time,
+                Video.entry_id==data['entry_id']
+            )).first()
         
-        duplicates = db.session.execute(query).first()
         if duplicates:
             app.logger.info(f"Duplicate entry detected in {location.name} for {data['person_id']}")
             return jsonify({"msg": "Duplicate entry attempts"}), 400
@@ -85,7 +84,8 @@ def upload_videos() -> Response:
             return jsonify(response), 201    
             
         elif location.upload_method == "RTSP":
-            rtsp_info = RTSPInfo.query.filter(RTSPInfo.camera_id.in_([camera.id for camera in all_cameras])).all()
+            rtsp_info = db.session.execute(
+                select(RTSPInfo).where(RTSPInfo.camera_id.in_([camera.id for camera in all_cameras]))).scalars().all()
             streams = [info.stream_url for info in rtsp_info]
             start_timestamps = [current_time + timedelta(seconds=info.offset_amount) for info in rtsp_info]
             end_timestamps = [start_time + timedelta(seconds=VIDEO_LENGTH) for start_time in start_timestamps]
@@ -106,12 +106,9 @@ def upload_videos() -> Response:
 @upload.post("/confirm_upload/<video_id>")
 @admin_required
 def confirm_upload(video_id):
-    video = select(Video).where(
-        Video.id==video_id).limit(1)
-        
     video = db.session.execute(
-        video).scalar()
-        
+        select(Video).where(Video.id==video_id)).scalar()
+    
     if not video:
         return jsonify({"msg": f"Video {video_id} does not exist in the database"}), 404
     
@@ -125,8 +122,12 @@ def confirm_upload(video_id):
 @upload.post("/find_parent/<video_id>")
 @admin_required
 def find_parent(video_id):
-    video , camera = db.session.execute(
-        select(Video, Camera).join(Camera, Camera.id==Video.camera_id).where(Video.id==video_id).limit(1)).first()
+    video, camera = db.session.execute(
+        select(Video, Camera).join(
+            Camera, Camera.id==Video.camera_id
+        ).where(
+            Video.id==video_id
+        ).limit(1)).first()
     
     if not camera.is_primary:
         app.logger.debug(f"Video {video_id} is not from a primary camera")

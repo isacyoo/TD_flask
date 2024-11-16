@@ -1,6 +1,6 @@
 import os
-from ast import literal_eval
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
@@ -9,7 +9,6 @@ from sqlalchemy import select, func
 
 from clients import s3_client
 from utils.auth import admin_required, web_only, both_web_and_api
-from utils.misc import video_is_primary
 from utils.metrics import timeit, fail_counter
 from constants import REVIEW_DONE, REVIEW_READY
 from databases import *
@@ -31,6 +30,16 @@ def parse_time_range(time_range):
     
     return None
 
+def video_is_primary(video):
+    camera = db.session.execute(
+        select(Camera).where(Camera.id==video.camera_id)).scalar()
+    parent = db.session.execute(
+        select(ParentChildDetected).where(ParentChildDetected.child==video.entry_id)).scalar()
+    if not parent and camera.is_primary:
+        return True
+    
+    return False
+
 @video.get("/all_unreviewed_videos/<location_id>")
 @both_web_and_api
 def get_all_unreviewed_videos(location_id) -> Response:
@@ -47,7 +56,7 @@ def get_all_unreviewed_videos(location_id) -> Response:
     if person_id:
         query = query.where(Video.person_id==person_id)
     if time_range:
-        start_time = datetime.utcnow() - timedelta(seconds=int(time_range))
+        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
         query = query.where(Video.entered_at>start_time)
         
     query = query.order_by(
@@ -59,14 +68,13 @@ def get_all_unreviewed_videos(location_id) -> Response:
            {"location": video.name} for video in videos]
     return jsonify(res)
 
-@video.get("/unreviewed_videos/<location_id>/<page>")
+@video.get("/unreviewed_videos/<location_id>/<int:page>")
 @timeit
 @both_web_and_api
 def get_unreviewed_videos(location_id, page) -> Response:
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
     
-    page = int(page)
     query = select(Video.id,
                    Video.person_id,
                    Video.entry_id,
@@ -76,7 +84,7 @@ def get_unreviewed_videos(location_id, page) -> Response:
     if person_id:
         query = query.where(Video.person_id==person_id)
     if time_range:
-        start_time = datetime.utcnow() - timedelta(seconds=int(time_range))
+        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
         query = query.where(Video.entered_at>start_time)
         
     query = query.order_by(
@@ -113,7 +121,7 @@ def get_all_history_videos(location_id) -> Response:
     if person_id:
         query = query.where(Video.person_id==person_id)
     if time_range:
-        start_time = datetime.utcnow() - timedelta(seconds=int(time_range))
+        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
         query = query.where(Video.entered_at>start_time)
         
     query = query.order_by(
@@ -127,14 +135,13 @@ def get_all_history_videos(location_id) -> Response:
     
     return jsonify(res)
 
-@video.get("/history_videos/<location_id>/<page>")
+@video.get("/history_videos/<location_id>/<int:page>")
 @timeit
 @both_web_and_api
 def get_history_videos(location_id, page) -> Response:
     action_ids = request.args.getlist("actionId", None)
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
-    page = int(page)
     
     query = select(Video.id,
                    Video.person_id,
@@ -148,7 +155,7 @@ def get_history_videos(location_id, page) -> Response:
     if person_id:
         query = query.where(Video.person_id==person_id)
     if time_range:
-        start_time = datetime.utcnow() - timedelta(seconds=int(time_range))
+        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
         query = query.where(Video.entered_at>start_time)
         
     query = query.order_by(
@@ -225,7 +232,7 @@ def get_all_videos_with_first_entry(id):
     keys = ["id", "person_id", "entry_id", "status", "entered_at"]
     videos = [
         { key: check_type_and_format(getattr(video, key)) for key in keys} |
-        {"location": video.location_name, "person_meta": literal_eval(video.person_meta)} for video in videos
+        {"location": video.location_name, "person_meta": json.loads(video.person_meta)} for video in videos
     ]
     res = {
         'action': {
@@ -244,9 +251,11 @@ def get_all_videos_with_first_entry(id):
 def get_adjacent_videos(id):
     action_id = request.args.get("actionId", None)
     person_id = request.args.get("personId", None)
-    
     current_video = db.session.execute(
-        select(Video).filter_by(user_id=current_user.id, id=id).limit(1)).scalar_one_or_none()
+        select(Video).where(
+            Video.user_id==current_user.id, 
+            Video.id==id)).scalar_one_or_none()
+
     if not current_video:
         app.logger.info(f'Adjacent video could not be found as the video does not exist: {current_user.id} - {id}')
         return jsonify({"msg": "Video not found"}), 404
@@ -256,7 +265,7 @@ def get_adjacent_videos(id):
     
     next_query = select(Video.id)
     
-    next_query = next_query.filter(
+    next_query = next_query.where(
         Video.user_id==current_user.id, 
         Video.entered_at<current_video.entered_at,
         Video.status==current_video.status,
@@ -264,9 +273,9 @@ def get_adjacent_videos(id):
         )
     
     if action_id:
-        next_query = next_query.filter(Video.action_id==action_id)
+        next_query = next_query.where(Video.action_id==action_id)
     if person_id:
-        next_query = next_query.filter(Video.person_id==person_id)
+        next_query = next_query.where(Video.person_id==person_id)
     next_query = next_query.order_by(
         Video.entered_at.desc(), Video.id.desc()
     )
@@ -274,7 +283,7 @@ def get_adjacent_videos(id):
     
     previous_query = select(Video.id)
     
-    previous_query = previous_query.filter(
+    previous_query = previous_query.where(
         Video.user_id==current_user.id, 
         Video.entered_at>current_video.entered_at,
         Video.status==current_video.status,
@@ -282,9 +291,9 @@ def get_adjacent_videos(id):
         )
     
     if action_id:
-        previous_query = previous_query.filter(Video.action_id==action_id)
+        previous_query = previous_query.where(Video.action_id==action_id)
     if person_id:
-        previous_query = previous_query.filter(Video.person_id==person_id)
+        previous_query = previous_query.where(Video.person_id==person_id)
         
     previous_query = previous_query.order_by(
         Video.entered_at, Video.id
@@ -310,8 +319,10 @@ def get_adjacent_videos(id):
 @both_web_and_api
 def get_video(id):
     video = db.session.execute(
-        select(Video.id).filter_by(user_id=current_user.id, id=id).limit(1)).scalar_one_or_none()
-    
+        select(Video).where(
+            Video.user_id==current_user.id, 
+            Video.id==id)).scalar_one_or_none()
+
     if not video:
         app.logger.info(f'Video id {id} not found | user id: {current_user.id}')
         return jsonify({"msg": "Video not found"}), 404
@@ -329,8 +340,7 @@ def get_video(id):
 @video.post("/set_video_status/<id>/<status>")
 @admin_required
 def set_video_status(id, status):
-    video = db.session.execute(
-        select(Video).filter_by(id=id).limit(1)).scalar_one_or_none()
+    video = get_video(id)
     if not video:
         app.logger.info(f"Video id {id} not found")
         return jsonify({"msg": "Video not found"}), 404
@@ -342,8 +352,7 @@ def set_video_status(id, status):
 @video.get("/check_video_exist/<id>")
 @admin_required
 def check_video_exist(id):
-    video = db.session.execute(
-        select(Video).filter_by(id=id).limit(1)).scalar_one_or_none()
+    video = get_video(id)
     if not video:
         return jsonify({"exists": False})
     return jsonify({"exists": True})
@@ -351,8 +360,7 @@ def check_video_exist(id):
 @video.get("/check_video_primary/<id>")
 @admin_required
 def check_video_primary(id):
-    video = db.session.execute(
-        select(Video).filter_by(id=id).limit(1)).scalar_one_or_none()
+    video = get_video(id)
     if not video:
         return jsonify({"msg": "Video not found"}), 404
     return jsonify({"is_primary": video_is_primary(video)})
@@ -379,3 +387,8 @@ def get_total_unreviewed_videos_per_location():
     res = db.session.execute(query).all()
     keys = ['id', 'name', 'count']
     return serialize(res, keys)
+
+def get_video(id):
+    video = db.session.execute(
+        select(Video).where(Video.id==id).limit(1)).scalar_one_or_none()
+    return video

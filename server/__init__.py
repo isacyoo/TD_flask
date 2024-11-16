@@ -4,7 +4,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from sqlalchemy import MetaData
+from sqlalchemy import select
 from flask_jwt_extended import JWTManager
 from server.routes import *
 
@@ -20,7 +20,10 @@ def create_app():
     @jwt.user_lookup_loader
     def user_lookup_callback(_jwt_header, jwt_data):
         identity = jwt_data["sub"]
-        return User.query.filter_by(id=identity).one_or_none()
+        user = db.session.execute(
+            select(User).where(User.id == identity)
+        ).scalars().one_or_none()
+        return user
     
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
     app.config.from_prefixed_env()
@@ -39,7 +42,6 @@ def register_blueprint(app):
         app.register_blueprint(video)
         app.register_blueprint(action)
         app.register_blueprint(location)
-        app.register_blueprint(camera)
         app.register_blueprint(schedule)
         db.create_all()
         

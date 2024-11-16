@@ -15,27 +15,22 @@ schedule = Blueprint("schedule", "__name__")
 @schedule.get('/schedule')
 @both_web_and_api
 def get_all_schedule():
-    all_locations = db.session.query(Location).filter(
-        Location.user_id == current_user.id).all()
+    all_locations = db.session.execute(
+        select(Location).where(Location.user_id==current_user.id)).scalars().all()
     app.logger.debug(f'Get schedule for all locations successful with {current_user}')
     return serialize(all_locations, ['id', 'name', 'operational_hours'])
 
 @schedule.get('/schedule/<location_id>')
 @both_web_and_api
 def get_location_schedule(location_id):
-    location = db.session.execute(
-        select(Location).filter_by(user_id=current_user.id, id=location_id).limit(1)).scalar_one_or_none()
-    
+    location = get_location(location_id)    
     app.logger.debug(f'Get schedule for location {location_id} successful with {current_user}')
     return serialize(location, ['id', 'name', 'operational_hours'])
-
 
 @schedule.post('/schedule/<location_id>')
 @both_web_and_api
 def modify_location_schedule(location_id):
-    location = db.session.execute(
-        select(Location).filter_by(user_id=current_user.id, id=location_id).limit(1)).scalar_one_or_none()
-    
+    location = get_location(location_id)    
     if not location:
         app.logger.info(f'Location id {location_id} not found with {current_user.id}')
         return jsonify({"msg": "Location not found"}), 404
@@ -53,12 +48,8 @@ def modify_location_schedule(location_id):
     
     data_retention = location.stream_retention_hours
     timezone = current_user.timezone
-    rtsp_details = RTSPInfo.query.join(
-        Camera,
-        Camera.id==RTSPInfo.camera_id
-    ).filter(
-        Camera.location_id==location_id
-    ).all()
+    rtsp_details = db.session.execute(
+        select(RTSPInfo).join(Camera).where(Camera.location_id==location_id)).all()
 
     rtsp_details = [{
         'camera_id': rtsp.camera_id,
@@ -84,3 +75,8 @@ def modify_location_schedule(location_id):
     )    
 
     return jsonify({"msg": "Schedule updated"}), 201
+
+def get_location(location_id):
+    location = db.session.execute(
+        select(Location).where(Location.user_id==current_user.id, Location.id==location_id)).scalar_one_or_none()
+    return location

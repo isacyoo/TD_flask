@@ -4,6 +4,7 @@ from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import create_access_token, current_user
 from passlib.hash import sha256_crypt
+from sqlalchemy import select
 
 from utils.auth import validate_login, admin_required, web_only
 from utils.misc import has_all_keys
@@ -34,7 +35,9 @@ def create_token() -> Response:
 @admin_required
 def reset_password() -> Response:
     id = request.json.get("id","")
-    user = User.query.filter_by(id=id).one_or_none()
+    user = db.session.execute(
+        select(User).where(User.id == id)).scalar_one_or_none()
+    
     if not user:
         app.logger.info(f'Password reset request failed due to invalid id: {id}')
         return jsonify({"msg": "Id not found"}), 404
