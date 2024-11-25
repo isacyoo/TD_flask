@@ -35,7 +35,7 @@ def modify_location_schedule(location_id):
         app.logger.info(f'Location id {location_id} not found with {current_user.id}')
         return jsonify({"msg": "Location not found"}), 404
     
-    if not location.upload_method == 'RTSP':
+    if not location.upload_method.value == 'RTSP':
         app.logger.info(f'Location id {location_id} is not configured with RTSP')
         return jsonify({"msg": "Location not configured with RTSP"}), 400
     
@@ -46,21 +46,24 @@ def modify_location_schedule(location_id):
         app.logger.info(f'Invalid schedule with {current_user.id}')
         return jsonify({"msg": "Invalid schedule"}), 400
     
+    location.operational_hours = json.dumps(new_schedule)
+    db.session.commit()
+    
     data_retention = location.stream_retention_hours
     timezone = current_user.timezone
     rtsp_details = db.session.execute(
-        select(RTSPInfo).join(Camera).where(Camera.location_id==location_id)).all()
+        select(RTSPInfo).join(Camera).where(Camera.location_id==location_id)).scalars().all()
 
     rtsp_details = [{
         'camera_id': rtsp.camera_id,
         'stream_url': rtsp.stream_url,
-        'data_retention': data_retention,
-        'timezone': timezone
+        'data_retention': data_retention
     } for rtsp in rtsp_details]
 
     location_info = {
         'location_id': location_id,
-        'rtsp_details': rtsp_details
+        'rtsp_details': rtsp_details,
+        'timezone': timezone
     }
 
     message = {
@@ -68,11 +71,11 @@ def modify_location_schedule(location_id):
         'new_schedule': new_schedule
     }
 
-    queue_url = sqs_client.get_queue_url(QueueName=os.getenv('UPDATE_SCHEDULE_QUEUE'))['QueueUrl'],
+    queue_url = sqs_client.get_queue_url(QueueName=os.getenv('UPDATE_SCHEDULE_QUEUE'))['QueueUrl']
     sqs_client.send_message(
         QueueUrl=queue_url,
         MessageBody=json.dumps(message)
-    )    
+    )
 
     return jsonify({"msg": "Schedule updated"}), 201
 
