@@ -8,11 +8,8 @@ from sqlalchemy import select
 
 from databases import Camera, ParentChildDetected, db
 
-def configure_logging(config_path='logging.yaml', default_level=logging.INFO, env_key='INFER_LOG_CONFIG'):
+def configure_logging(config_path='logging.yaml', default_level=logging.INFO):
     path = config_path
-    value = os.getenv(env_key, None)
-    if value:
-        path = value
 
     logging.captureWarnings(True)
 
@@ -30,7 +27,6 @@ def configure_logging(config_path='logging.yaml', default_level=logging.INFO, en
     else:
         logging.error('Failed to load logging configuration file. Using basicConfig')
         logging.basicConfig(level=default_level)
-        logging.getLogger().setLevel(logging.DEBUG)
 
 def has_all_keys(data, keys):
     return all([key in data for key in keys])
