@@ -7,9 +7,9 @@ from flask import current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select
 
-from databases import db, Video, Camera, RTSPInfo, ParentChildDetected
+from databases import db, Video, Camera, RTSPInfo
 from server.routes.location import grab_location_id
-from utils.auth import api_only, admin_required
+from utils.auth import error_handler
 from utils.misc import has_all_keys
 from utils.upload import *
 from utils.hours import convert_to_UTC, WeekSchedule
@@ -22,7 +22,7 @@ upload = Blueprint("upload", "__name__")
 @upload.post("/upload")
 @timeit
 @fail_counter
-@api_only
+@error_handler(web=False)
 def upload_videos() -> Response:
     try:
         data = request.get_json()
@@ -104,7 +104,7 @@ def upload_videos() -> Response:
         return jsonify({"msg": "Upload failed"}), 400
         
 @upload.post("/confirm_upload/<video_id>")
-@admin_required
+@error_handler(admin=True)
 def confirm_upload(video_id):
     video = db.session.execute(
         select(Video).where(Video.id==video_id)).scalar()
@@ -120,7 +120,7 @@ def confirm_upload(video_id):
     
     
 @upload.post("/find_parent/<video_id>")
-@admin_required
+@error_handler(admin=True)
 def find_parent(video_id):
     video, camera = db.session.execute(
         select(Video, Camera).join(
@@ -146,8 +146,8 @@ def find_parent(video_id):
         app.logger.debug(f"Parent not found for video {video_id}")
         return jsonify({"is_primary": True}), 200
     else:
-        parent_child = ParentChildDetected(parent=parent_entry_id,
-                                           child=video.entry_id)
+        # parent_child = ParentChildDetected(parent=parent_entry_id,
+        #                                    child=video.entry_id)
         db.session.add(parent_child)
         db.session.commit()
         app.logger.debug(f"Parent entry id {parent_entry_id} found for video {video_id}")

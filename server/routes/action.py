@@ -7,14 +7,14 @@ from sqlalchemy import select
 
 from constants import REVIEW_DONE, REVIEW_READY
 from databases import db, Action, Video
-from utils.auth import error_handler, both_web_and_api
+from utils.auth import error_handler
 
 action = Blueprint("action", "__name__")
 
 CAN_APPLY_ACTION_STATUS = [REVIEW_READY, REVIEW_DONE]
 
 @action.get("/actions")
-@error_handler(web=True, api=True)
+@error_handler()
 def get_actions() -> Response:
     all_actions = db.session.execute(
         select(Action).where(
@@ -23,7 +23,7 @@ def get_actions() -> Response:
     return jsonify(all_actions)
 
 @action.post("/action")
-@both_web_and_api
+@error_handler()
 def create_action() -> Response:
     data = request.json
     db.session.add(Action(**data))
@@ -32,7 +32,7 @@ def create_action() -> Response:
 
     
 @action.post("/action_to_video/<video_id>/<action_id>")
-@both_web_and_api
+@error_handler()
 def apply_action_to_video(video_id, action_id):
     video = db.session.execute(
         select(Video).where(

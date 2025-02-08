@@ -2,11 +2,12 @@ from datetime import timedelta
 
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
-from flask_jwt_extended import create_access_token, current_user
+from flask_jwt_extended import create_access_token, create_refresh_token, current_user, \
+    set_access_cookies, set_refresh_cookies, unset_jwt_cookies
 from passlib.hash import sha256_crypt
 from sqlalchemy import select
 
-from utils.auth import validate_login, admin_required, web_only
+from utils.auth import validate_login, error_handler
 from utils.misc import has_all_keys
 from databases import db, User
 
@@ -26,13 +27,26 @@ def create_token() -> Response:
         return jsonify({"msg": "Invalid login credentials"}), 401
     token = create_access_token(identity=id, 
                                 additional_claims={'is_admin': user.is_admin,
-                                                   'is_api': False},)
-    response = jsonify({"id":user.id, "name":user.name, "role": 'ADMIN' if user.is_admin else 'USER', "access_token": token})
+                                                   'is_api': False})
+    refresh_token = create_refresh_token(identity=id)
+    response = jsonify({"id":user.id, "name":user.name, "role": 'ADMIN' if user.is_admin else 'USER'})
+    
+    set_access_cookies(response, token)
+    set_refresh_cookies(response, refresh_token)
+
     app.logger.debug(f'Log in successful for user id {user}')
     return response, 201
 
+@auth.post("/logout")
+@error_handler(api=False)
+def logout() -> Response:
+    response = jsonify({"logout": True})
+    unset_jwt_cookies(response)
+    app.logger.debug(f'Logout successful for user id {current_user.id}')
+    return response, 201
+
 @auth.post('/reset_password')
-@admin_required
+@error_handler(web=False)
 def reset_password() -> Response:
     id = request.json.get("id","")
     user = db.session.execute(
@@ -48,13 +62,13 @@ def reset_password() -> Response:
     app.logger.info(f'Password reset successful for user {id}')
     return jsonify({"msg": "Password reset successful"}), 201
 
-@auth.get("/user_info")
-@web_only
+@auth.get("/user_info") 
+@error_handler()
 def get_user_info() -> Response:
-    return jsonify({"id":current_user.id, "name":current_user.name})
+    return jsonify({"id":current_user.id, "name":current_user.name, "role": 'ADMIN' if current_user.is_admin else 'USER'})
 
 @auth.post("/reset_api_key")
-@web_only
+@error_handler()
 def reset_api_key():
     token = create_access_token(identity=current_user.id, 
                                 additional_claims={'is_admin': current_user.is_admin,
@@ -68,6 +82,6 @@ def reset_api_key():
                     "api_key" : token}), 201
 
 @auth.get('/api_key')
-@web_only
+@error_handler()
 def get_api_key():
     return jsonify({"api_key" : current_user.api_key})

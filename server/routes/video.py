@@ -6,9 +6,10 @@ from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select, func
+from werkzeug.exceptions import NotFound
 
 from clients import s3_client
-from utils.auth import admin_required, web_only, both_web_and_api
+from utils.auth import error_handler
 from utils.metrics import timeit, fail_counter
 from constants import REVIEW_DONE, REVIEW_READY
 from databases import *
@@ -41,7 +42,7 @@ def video_is_primary(video):
     return False
 
 @video.get("/all_unreviewed_videos/<location_id>")
-@both_web_and_api
+@error_handler()
 def get_all_unreviewed_videos(location_id) -> Response:
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
@@ -70,7 +71,7 @@ def get_all_unreviewed_videos(location_id) -> Response:
 
 @video.get("/unreviewed_videos/<location_id>/<int:page>")
 @timeit
-@both_web_and_api
+@error_handler()
 def get_unreviewed_videos(location_id, page) -> Response:
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
@@ -89,7 +90,10 @@ def get_unreviewed_videos(location_id, page) -> Response:
         
     query = query.order_by(
         Video.entered_at.desc(), Video.id.desc())
-    unreviewed_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
+    try:
+        unreviewed_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
+    except NotFound:
+        return jsonify({"msg": "No videos found"}), 404
     
     video_keys = ["id","person_id","entry_id", "entered_at"]
     page_keys = ["pages", "per_page", "total"]
@@ -103,7 +107,7 @@ def get_unreviewed_videos(location_id, page) -> Response:
     return jsonify(res)
 
 @video.get("/all_history_videos/<location_id>")
-@both_web_and_api
+@error_handler()
 def get_all_history_videos(location_id) -> Response:
     action_ids = request.args.getlist("actionId", None)
     person_id = request.args.get("personId", None)
@@ -137,7 +141,7 @@ def get_all_history_videos(location_id) -> Response:
 
 @video.get("/history_videos/<location_id>/<int:page>")
 @timeit
-@both_web_and_api
+@error_handler()
 def get_history_videos(location_id, page) -> Response:
     action_ids = request.args.getlist("actionId", None)
     person_id = request.args.get("personId", None)
@@ -175,7 +179,7 @@ def get_history_videos(location_id, page) -> Response:
     return jsonify(res)
 
 @video.get("/all_videos_with_first_entry_video_id/<id>")
-@both_web_and_api
+@error_handler()
 def get_all_videos_with_first_entry(id):
     primary_video = select(
         Video.id,
@@ -247,7 +251,7 @@ def get_all_videos_with_first_entry(id):
         
     
 @video.get("/adjacent_videos/<id>")
-@web_only
+@error_handler(api=False)
 def get_adjacent_videos(id):
     action_id = request.args.get("actionId", None)
     person_id = request.args.get("personId", None)
@@ -316,7 +320,7 @@ def get_adjacent_videos(id):
 @video.get("/video/<id>")
 @timeit
 @fail_counter
-@both_web_and_api
+@error_handler()
 def get_video(id):
     video = db.session.execute(
         select(Video).where(
@@ -327,18 +331,17 @@ def get_video(id):
         app.logger.info(f'Video id {id} not found | user id: {current_user.id}')
         return jsonify({"msg": "Video not found"}), 404
     try:
-        url = s3_client.generate_presigned_url(
-                                                'get_object',
+        url = s3_client.generate_presigned_url('get_object',
                                                 Params={'Bucket':os.getenv('S3_BUCKET_NAME'),
                                                         'Key':f'videos/{video.id}.mp4'},
                                                 ExpiresIn=3600) 
-        return {"url": url}
+        return jsonify({"url": url})
     except Exception as e:
         app.logger.info(f'Send file failed with {video.id}: {e}')
         return jsonify({"msg": 'Video stream failed'}), 400   
 
 @video.post("/set_video_status/<id>/<status>")
-@admin_required
+@error_handler(admin=True)
 def set_video_status(id, status):
     video = get_video(id)
     if not video:
@@ -350,7 +353,7 @@ def set_video_status(id, status):
     return jsonify({"msg": f"Video {id} status updated from {original_status} to {status}"}), 201
 
 @video.get("/check_video_exist/<id>")
-@admin_required
+@error_handler(admin=True)
 def check_video_exist(id):
     video = get_video(id)
     if not video:
@@ -358,7 +361,7 @@ def check_video_exist(id):
     return jsonify({"exists": True})
 
 @video.get("/check_video_primary/<id>")
-@admin_required
+@error_handler(admin=True)
 def check_video_primary(id):
     video = get_video(id)
     if not video:
@@ -366,7 +369,7 @@ def check_video_primary(id):
     return jsonify({"is_primary": video_is_primary(video)})
   
 @video.get("/total_unreviewed_videos")
-@both_web_and_api
+@error_handler()
 def get_total_unreviewed_videos():
     query = select(func.count()).select_from(Video).where(
         Video.user_id==current_user.id,
@@ -375,7 +378,7 @@ def get_total_unreviewed_videos():
     return jsonify({"total_unreviewed": res})
 
 @video.get("/total_unreviewed_videos_per_location")
-@both_web_and_api
+@error_handler()
 def get_total_unreviewed_videos_per_location():
     query = select(Location.id, Location.name, func.count()).select_from(Video)
     query = join_camera(query)

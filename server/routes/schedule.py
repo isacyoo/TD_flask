@@ -7,13 +7,13 @@ from sqlalchemy import select
 
 from databases import db, serialize, Location, RTSPInfo, Camera
 from clients import sqs_client
-from utils.auth import both_web_and_api
+from utils.auth import error_handler
 from utils.hours import WeekSchedule
 
 schedule = Blueprint("schedule", "__name__")
 
 @schedule.get('/schedule')
-@both_web_and_api
+@error_handler()
 def get_all_schedule():
     all_locations = db.session.execute(
         select(Location).where(Location.user_id==current_user.id)).scalars().all()
@@ -21,14 +21,14 @@ def get_all_schedule():
     return serialize(all_locations, ['id', 'name', 'operational_hours'])
 
 @schedule.get('/schedule/<location_id>')
-@both_web_and_api
+@error_handler()
 def get_location_schedule(location_id):
     location = get_location(location_id)    
     app.logger.debug(f'Get schedule for location {location_id} successful with {current_user}')
     return serialize(location, ['id', 'name', 'operational_hours'])
 
 @schedule.post('/schedule/<location_id>')
-@both_web_and_api
+@error_handler()
 def modify_location_schedule(location_id):
     location = get_location(location_id)    
     if not location:

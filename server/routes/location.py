@@ -3,13 +3,13 @@ from flask import current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select
 
-from utils.auth import both_web_and_api
+from utils.auth import error_handler
 from databases import Location, serialize, db
 
 location = Blueprint("location", "__name__")
 
 @location.get("/locations")
-@both_web_and_api
+@error_handler()
 def get_locations() -> Response:
     keys = ["id", "name"]
     locations = db.session.execute(
@@ -17,7 +17,7 @@ def get_locations() -> Response:
     return serialize(locations, keys)   
     
 @location.get("/location_id/<name>")
-@both_web_and_api
+@error_handler()
 def get_location_id(name) -> Response:
     keys = ["id", "name"]
     location = grab_location_id(current_user.id, name)

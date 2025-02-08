@@ -1,6 +1,6 @@
 from flask import Blueprint, request, Response, jsonify, session
 from flask import current_app as app
-from utils.auth import admin_required
+from utils.auth import error_handler
 import random
 
 from databases import db, User
@@ -8,7 +8,7 @@ from databases import db, User
 users = Blueprint("users", "__name__")
 
 @users.post("/user")
-@admin_required
+@error_handler()
 def create_user() -> Response:
     data = request.get_json()
     db.session.add(User(**data))
