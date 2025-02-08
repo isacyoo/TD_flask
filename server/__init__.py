@@ -14,7 +14,6 @@ from utils.misc import configure_logging
 def create_app():
     app = Flask(__name__)
     migrate = Migrate(app, db, render_as_batch=True)
-    CORS(app)
     jwt = JWTManager()
     
     @jwt.user_lookup_loader
