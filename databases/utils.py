@@ -1,68 +1,49 @@
-from collections.abc import Iterable
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
-from flask import jsonify
+from sqlalchemy import select
 from flask_jwt_extended import current_user
 
 from .models import *
-from constants import *
+from utils.status_codes import EventStatusCode
 
-def check_type_and_format(val):
-    if isinstance(val, datetime):
-        return val.strftime("%Y-%m-%d %H:%M:%S")
+def query_videos(location_id, person_id, time_range, action_ids, history=False):
+    if action_ids and not history:
+        raise ValueError("Cannot query videos with action_ids without history=True")
+    
+    query = select(Event).join(Location).where(
+        Location.user_id==current_user.id,
+        Event.status==EventStatusCode.REVIEW_READY,
+        Event.location_id==location_id
+    )
+
+    if history:
+        query = query.where(Event.action_id.is_not(None))
     else:
-        return val
+        query = query.where(Event.action_id.is_(None))
 
-def serialize(res, keys):
-    if isinstance(res, Iterable):
-        return jsonify([{key:getattr(re, key) for key in keys} for re in res])
-    return jsonify({key:getattr(res, key) for key in keys})
+    if person_id:
+        query = query.where(Video.person_id==person_id)
 
-def join_camera(query):
-    return query.join(Camera, Video.camera_id == Camera.id)
+    if time_range:
+        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
+        query = query.where(Video.entered_at > start_time)
 
-def join_action(query, is_outer=False):
-    return query.join(Action, Video.action_id == Action.id, isouter=is_outer)
-
-def join_location(query):
-    return query.join(Location, Camera.location_id == Location.id)
-
-def join_parent_child_detected(query, join_child=True):
-    if join_child:
-        return query.join(
-            ParentChildDetected,
-            Video.entry_id == ParentChildDetected.child,
-            isouter=True)
-    else:
-        return query.join(
-            ParentChildDetected,
-            Video.entry_id == ParentChildDetected.parent,
-            isouter=True)
-
-def with_user_identity(query):
-    return query.where(
-        Video.user_id == current_user.id)
-
-def filter_primary_videos(query):
-    return query.where(
-        Camera.is_primary == True,
-        ParentChildDetected.parent == None)
-
-def query_unreviewed_videos(query, location_id):
-    query = join_camera(query)
-    query = with_user_identity(query)
-    query = query.where(
-        Video.status == REVIEW_READY,
-        Camera.location_id == location_id)
-
+    if action_ids:
+        query = query.where(Event.action_id.in_(action_ids))
+        
+    query = query.order_by(
+        Event.processed_at, Event.id.desc())
+    
     return query
 
-def query_history_videos(query, location_id):
-    query = join_camera(query)
-    query = join_action(query)
-    query = with_user_identity(query)
-    query = query.where(
-        Video.status == REVIEW_DONE,
-        Camera.location_id == location_id)
 
-    return query
+def get_page_info(paginate, iter_pages_count=3):
+    iter_pages = list(paginate.iter_pages(left_current=iter_pages_count,
+                                     right_current=iter_pages_count))
+    return {
+        "total": paginate.total,
+        "page": paginate.page,
+        "pages": paginate.pages,
+        "per_page": paginate.per_page,
+        "iter_pages": iter_pages
+    }

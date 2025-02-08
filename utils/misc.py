@@ -4,9 +4,6 @@ import os
 
 import yaml
 from flask import current_app as app
-from sqlalchemy import select
-
-from databases import Camera, ParentChildDetected, db
 
 def configure_logging(config_path='logging.yaml', default_level=logging.INFO):
     path = config_path

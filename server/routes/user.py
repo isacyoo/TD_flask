@@ -1,7 +1,6 @@
 from flask import Blueprint, request, Response, jsonify, session
 from flask import current_app as app
 from utils.auth import error_handler
-import random
 
 from databases import db, User
 

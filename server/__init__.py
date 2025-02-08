@@ -1,13 +1,10 @@
-import json
 from datetime import timedelta
 from flask import Flask
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import select
 from flask_jwt_extended import JWTManager
-from server.routes import *
 
+from server.routes import *
 from databases import db, User
 from utils.misc import configure_logging
 

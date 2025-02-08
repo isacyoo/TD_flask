@@ -15,44 +15,8 @@ convention = {
 }
 
 metadata = MetaData(naming_convention=convention)
-class CustomPagination(Pagination):
-
-    def _query_items(self):
-        select = self._query_args["select"]
-        select = select.limit(self.per_page).offset(self._query_offset)
-        session = self._query_args["session"]
-        return list(session.execute(select))
-
-    def _query_count(self):
-        select = self._query_args["select"]
-        sub = select.options(sa.orm.lazyload("*")).order_by(None).subquery()
-        session = self._query_args["session"]
-        out = session.execute(sa.select(sa.func.count()).select_from(sub)).scalar()
-        return out
-
-class CustomSQLAlchemy(SQLAlchemy):
     
-    def paginate(
-        self,
-        select: sa.sql.Select,
-        *,
-        page: int | None = None,
-        per_page: int | None = None,
-        max_per_page: int | None = None,
-        error_out: bool = True,
-        count: bool = True,
-    ) -> Pagination:
-        return CustomPagination(
-            select=select,
-            session=self.session(),
-            page=page,
-            per_page=per_page,
-            max_per_page=max_per_page,
-            error_out=error_out,
-            count=count,
-        )
-    
-db = CustomSQLAlchemy()
+db = SQLAlchemy()
 
 class UploadOptionEnum(Enum):
     UserUpload= 'UserUpload'
@@ -72,15 +36,18 @@ class Location(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False)
     name = db.Column(db.String(36), nullable=False)
-    upload_method = db.Column(db.Enum(UploadOptionEnum), default='UserUpload', nullable=False)
+    upload_method = db.Column(db.Enum(UploadOptionEnum), default=UploadOptionEnum.UserUpload, nullable=False)
     custom_upload_method = db.Column(db.String(256))
     operational_hours = db.Column(db.String(256))
     stream_retention_hours = db.Column(db.Integer, default=24)
+
+    cameras = db.relationship("Camera", backref="location", innerjoin=True)
 
 class Camera(db.Model):
     __table_args__ = (db.UniqueConstraint('location_id', 'name', name='_location_name_uc'),)
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     location_id = db.Column(db.Integer, db.ForeignKey(Location.id), nullable=False)
+    display_order = db.Column(db.Integer)
     name = db.Column(db.String(36))
     threshold = db.Column(db.Float)
     x1 = db.Column(db.Float)
@@ -93,7 +60,6 @@ class Camera(db.Model):
     y4 = db.Column(db.Float)
     nx = db.Column(db.Float)
     ny = db.Column(db.Float)
-    is_primary = db.Column(db.Boolean, default=True, nullable=False)
     
 class Action(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'name', name='_user_name_uc'),)
@@ -102,34 +68,40 @@ class Action(db.Model):
     name = db.Column(db.String(36), nullable=False)
     is_tailgating = db.Column(db.Boolean)
     is_deleted = db.Column(db.Boolean)
+
+class Event(db.Model):
+    id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
+    location_id = db.Column(db.Integer, db.ForeignKey(Location.id), nullable=False)
+    processed_at = db.Column(db.DateTime)
+    reviewed_at = db.Column(db.DateTime)
+    deleted_at = db.Column(db.DateTime)
+    action_id = db.Column(db.Integer, db.ForeignKey(Action.id), index=True)
+    status = db.Column(db.Integer, index=True, nullable=False)
+
+class Entry(db.Model):
+    id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
+    event_id = db.Column(db.String(36), db.ForeignKey(Event.id), nullable=False, index=True)
+    person_id = db.Column(db.String(36), index=True)
+    person_meta = db.Column(db.String(1024), default="{}")
+    entered_at = db.Column(db.DateTime)
+
+    event = db.relationship("Event", backref="entries", innerjoin=True)
     
-class StatusCode(db.Model):
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    status = db.Column(db.String(36), nullable=False, unique=True)
-    
+
 class Video(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
     user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False, index=True)
     camera_id = db.Column(db.Integer, db.ForeignKey(Camera.id), nullable=False)
-    entry_id = db.Column(db.String(36), index=True)
-    person_meta = db.Column(db.String(1024), default="{}")
-    person_id = db.Column(db.String(36), index=True)
-    status = db.Column(db.Integer, db.ForeignKey(StatusCode.id), index=True, nullable=False)
-    entered_at = db.Column(db.DateTime)
+    entry_id = db.Column(db.String(36), db.ForeignKey(Entry.id), index=True)
+    status = db.Column(db.Integer, index=True, nullable=False)
     uploaded_at = db.Column(db.DateTime)
-    processed_at = db.Column(db.DateTime)
-    deleted_at = db.Column(db.DateTime)
-    reviewed_at = db.Column(db.DateTime)
-    action_id = db.Column(db.Integer, db.ForeignKey(Action.id), index=True)
 
+    entry = db.relationship("Entry", backref="videos", innerjoin=True)
+    
     def set_status(self, new_status):
         self.status = new_status
         db.session.commit()
-    
-class ParentChildDetected(db.Model):
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    parent = db.Column(db.String(36), db.ForeignKey(Video.entry_id), nullable=False, unique=True, index=True)
-    child = db.Column(db.String(36), db.ForeignKey(Video.entry_id), nullable=False, unique=True, index=True)
+
 
 class RTSPInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)

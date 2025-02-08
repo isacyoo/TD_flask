@@ -5,32 +5,19 @@ from flask import Blueprint, request, jsonify, current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select
 
-from databases import db, serialize, Location, RTSPInfo, Camera
+from databases import db, Location, RTSPInfo, Camera
 from clients import sqs_client
 from utils.auth import error_handler
 from utils.hours import WeekSchedule
 
 schedule = Blueprint("schedule", "__name__")
 
-@schedule.get('/schedule')
-@error_handler()
-def get_all_schedule():
-    all_locations = db.session.execute(
-        select(Location).where(Location.user_id==current_user.id)).scalars().all()
-    app.logger.debug(f'Get schedule for all locations successful with {current_user}')
-    return serialize(all_locations, ['id', 'name', 'operational_hours'])
-
-@schedule.get('/schedule/<location_id>')
-@error_handler()
-def get_location_schedule(location_id):
-    location = get_location(location_id)    
-    app.logger.debug(f'Get schedule for location {location_id} successful with {current_user}')
-    return serialize(location, ['id', 'name', 'operational_hours'])
-
 @schedule.post('/schedule/<location_id>')
 @error_handler()
 def modify_location_schedule(location_id):
-    location = get_location(location_id)    
+    location = db.session.execute(
+        select(Location).where(Location.user_id==current_user.id, Location.id==location_id)).scalar_one_or_none()
+
     if not location:
         app.logger.info(f'Location id {location_id} not found with {current_user.id}')
         return jsonify({"msg": "Location not found"}), 404
@@ -78,8 +65,3 @@ def modify_location_schedule(location_id):
     )
 
     return jsonify({"msg": "Schedule updated"}), 201
-
-def get_location(location_id):
-    location = db.session.execute(
-        select(Location).where(Location.user_id==current_user.id, Location.id==location_id)).scalar_one_or_none()
-    return location

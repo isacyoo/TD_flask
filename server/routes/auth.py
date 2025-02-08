@@ -16,15 +16,19 @@ auth = Blueprint("auth", "__name__")
 @auth.post("/login")
 def create_token() -> Response:
     data = request.get_json()
+
     if not has_all_keys(data, ["id", "password"]):
         app.logger.info(f'Invalid login credentials provided by {data}')
-        return "Invalid login credentials", 401
+        return jsonify({"msg": "Invalid login credentials"}), 401
+    
     id = data["id"]
     password = data["password"]
     verified, user = validate_login(id, password)
+
     if not verified:
         app.logger.info(f'Invalid login credentials provided by {id}')
         return jsonify({"msg": "Invalid login credentials"}), 401
+    
     token = create_access_token(identity=id, 
                                 additional_claims={'is_admin': user.is_admin,
                                                    'is_api': False})
@@ -55,11 +59,13 @@ def reset_password() -> Response:
     if not user:
         app.logger.info(f'Password reset request failed due to invalid id: {id}')
         return jsonify({"msg": "Id not found"}), 404
+    
     new_password = request.json.get("password","")
     hash = sha256_crypt.hash(new_password)
     user.password = hash
     db.session.commit()
     app.logger.info(f'Password reset successful for user {id}')
+    
     return jsonify({"msg": "Password reset successful"}), 201
 
 @auth.get("/user_info") 

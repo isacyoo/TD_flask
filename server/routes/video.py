@@ -1,6 +1,4 @@
 import os
-import json
-from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
@@ -11,8 +9,8 @@ from werkzeug.exceptions import NotFound
 from clients import s3_client
 from utils.auth import error_handler
 from utils.metrics import timeit, fail_counter
-from constants import REVIEW_DONE, REVIEW_READY
-from databases import *
+from databases import db, Video, Location, query_videos, get_page_info
+from databases.schemas import EventSchema
 
 video = Blueprint("video", "__name__")
 BUCKET_NAME = "td.bucket"
@@ -31,222 +29,71 @@ def parse_time_range(time_range):
     
     return None
 
-def video_is_primary(video):
-    camera = db.session.execute(
-        select(Camera).where(Camera.id==video.camera_id)).scalar()
-    parent = db.session.execute(
-        select(ParentChildDetected).where(ParentChildDetected.child==video.entry_id)).scalar()
-    if not parent and camera.is_primary:
-        return True
-    
-    return False
-
-@video.get("/all_unreviewed_videos/<location_id>")
+@video.get("/all_unreviewed_events/<location_id>")
 @error_handler()
-def get_all_unreviewed_videos(location_id) -> Response:
+def get_all_unreviewed_events(location_id) -> Response:
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
 
-    query = select(Video.id,
-                   Video.person_id,
-                   Video.entry_id,
-                   Video.entered_at,
-                   Location.name)
-    query = query_unreviewed_videos(query, location_id)
-    query = join_location(query)
-    if person_id:
-        query = query.where(Video.person_id==person_id)
-    if time_range:
-        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
-        query = query.where(Video.entered_at>start_time)
+    query = query_videos(location_id, person_id, time_range, None)
         
-    query = query.order_by(
-        Video.entered_at.desc(), Video.id.desc())
-        
-    videos = db.session.execute(query).all()
-    keys = ["id", "person_id", "entry_id", "entered_at"]
-    res = [{ key:check_type_and_format(getattr(video, key)) for key in keys} |
-           {"location": video.name} for video in videos]
-    return jsonify(res)
+    events = db.session.execute(query).scalars().all()
+    events = EventSchema(many=True).dump(events)
 
-@video.get("/unreviewed_videos/<location_id>/<int:page>")
+    return jsonify(events)
+
+@video.get("/unreviewed_events/<location_id>/<int:page>")
 @timeit
 @error_handler()
-def get_unreviewed_videos(location_id, page) -> Response:
+def get_unreviewed_events(location_id, page) -> Response:
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
-    
-    query = select(Video.id,
-                   Video.person_id,
-                   Video.entry_id,
-                   Video.entered_at,)
-    query = query_unreviewed_videos(query, location_id)
 
-    if person_id:
-        query = query.where(Video.person_id==person_id)
-    if time_range:
-        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
-        query = query.where(Video.entered_at>start_time)
-        
-    query = query.order_by(
-        Video.entered_at.desc(), Video.id.desc())
+    query = query_videos(location_id, person_id, time_range, None)
+    
     try:
         unreviewed_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
     except NotFound:
-        return jsonify({"msg": "No videos found"}), 404
+        return jsonify({"msg": "No events found"}), 404
     
-    video_keys = ["id","person_id","entry_id", "entered_at"]
-    page_keys = ["pages", "per_page", "total"]
-    iter_pages = unreviewed_paginate.iter_pages(left_current=3,
-                                             right_current=3)
-    videos = [{key: check_type_and_format(
-        getattr(video, key)) for key in video_keys} for video in unreviewed_paginate.items]
-    page_info = {key: getattr(unreviewed_paginate, key)
-                 for key in page_keys} | {"iter_pages": list(iter_pages)}
-    res = {"videos": videos} | page_info
+    events = EventSchema(many=True).dump(unreviewed_paginate.items)
+    page_info = get_page_info(unreviewed_paginate)
+    res = {"events": events} | page_info
+
     return jsonify(res)
 
-@video.get("/all_history_videos/<location_id>")
+@video.get("/all_history_events/<location_id>")
 @error_handler()
-def get_all_history_videos(location_id) -> Response:
+def get_all_history_events(location_id) -> Response:
     action_ids = request.args.getlist("actionId", None)
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
-    
-    query = select(Video.id,
-                   Video.person_id,
-                   Video.entry_id,
-                   Video.entered_at,
-                   Action.name)
-    query = query_history_videos(query, location_id)
-    
-    if action_ids:
-        query = query.where(Video.action_id.in_(action_ids))
-    if person_id:
-        query = query.where(Video.person_id==person_id)
-    if time_range:
-        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
-        query = query.where(Video.entered_at>start_time)
-        
-    query = query.order_by(
-        Video.entered_at.desc(), Video.id.desc())
-    
-    videos = db.session.execute(query).all()
-    video_keys = ["id", "person_id", "entry_id", "entered_at"]
-    
-    res = [{ key:check_type_and_format(getattr(video, key)) for key in video_keys} |
-                {"action": video.name} for video in videos]
-    
-    return jsonify(res)
 
-@video.get("/history_videos/<location_id>/<int:page>")
+    query = query_videos(location_id, person_id, time_range, action_ids, True)
+    
+    events = db.session.execute(query).scalars().all()
+    events = EventSchema(many=True).dump(events)
+    
+    return jsonify(events)
+
+@video.get("/history_events/<location_id>/<int:page>")
 @timeit
 @error_handler()
-def get_history_videos(location_id, page) -> Response:
+def get_history_events(location_id, page) -> Response:
     action_ids = request.args.getlist("actionId", None)
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
-    
-    query = select(Video.id,
-                   Video.person_id,
-                   Video.entry_id,
-                   Video.entered_at,
-                   Action.name)
-    query = query_history_videos(query, location_id)
-    
-    if action_ids:
-        query = query.where(Video.action_id.in_(action_ids))
-    if person_id:
-        query = query.where(Video.person_id==person_id)
-    if time_range:
-        start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
-        query = query.where(Video.entered_at>start_time)
-        
-    query = query.order_by(
-        Video.entered_at.desc(), Video.id.desc())
-    
-    history_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
-    
-    video_keys = ["id", "person_id", "entry_id", "entered_at"]
-    page_keys = ["pages", "per_page", "total"]
-    iter_pages = history_paginate.iter_pages(left_current=3,
-                                             right_current=3)
-    
-    videos = [{ key: check_type_and_format(getattr(video, key)) for key in video_keys} |
-        {"action": video.name} for video in history_paginate.items]
-    page_info = { key: getattr(history_paginate, key) for key in page_keys} | {"iter_pages": list(iter_pages)}
-    res = {"videos": videos} | page_info
-    return jsonify(res)
 
-@video.get("/all_videos_with_first_entry_video_id/<id>")
-@error_handler()
-def get_all_videos_with_first_entry(id):
-    primary_video = select(
-        Video.id,
-        Video.camera_id,
-        Video.entry_id,
-        Video.action_id,
-        Video.status,
-        Action.name,
-        Location.id.label("location_id"),
-    )
-    primary_video = join_action(primary_video, is_outer=True)
-    primary_video = join_camera(primary_video)
-    primary_video = join_location(primary_video)
-    primary_video = with_user_identity(primary_video)
-    primary_video = primary_video.where(
-        Video.id == id)
-    primary_video = primary_video.limit(1)
-    primary_video = db.session.execute(primary_video).first()
+    query = query_videos(location_id, person_id, time_range, action_ids, True)
+    try:
+        history_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
+    except NotFound:
+        return jsonify({"msg": "No events found"}), 404
+    
+    events = EventSchema(many=True).dump(history_paginate.items)
+    page_info = get_page_info(history_paginate)
+    res = {"events": events} | page_info
 
-    if not primary_video:
-        return {"msg": "Video not found"}, 404
-    if not video_is_primary(primary_video):
-        return jsonify({"msg": "Video not primary"}), 400
-    
-    videos = []
-    def find_child_videos(parent):   
-        query = select(Video.id,
-                    Video.person_id,
-                    Video.entry_id,
-                    Video.status,
-                    Video.entered_at,
-                    Video.person_meta,
-                    Location.name.label("location_name"),
-                    ParentChildDetected.child)
-        query = join_camera(query)
-        query = join_location(query)
-        query = join_parent_child_detected(query, join_child=False)
-        query = with_user_identity(query)
-        query = query.where(
-            Video.entry_id == parent)
-        query = query.order_by(
-            Camera.is_primary.desc())
-        return list(db.session.execute(query).all())
-    
-    children_found = find_child_videos(primary_video.entry_id)
-        
-    while children_found:
-        videos += children_found
-        child_entry_id = children_found[0].child
-        if not child_entry_id:
-            break
-        children_found = find_child_videos(child_entry_id)
-        
-    keys = ["id", "person_id", "entry_id", "status", "entered_at"]
-    videos = [
-        { key: check_type_and_format(getattr(video, key)) for key in keys} |
-        {"location": video.location_name, "person_meta": json.loads(video.person_meta)} for video in videos
-    ]
-    res = {
-        'action': {
-            'id': primary_video.action_id,
-            'name': primary_video.name
-            },
-        'videos': videos,
-        'location': primary_video.location_id,
-        'history': primary_video.status == REVIEW_DONE
-    }
     return jsonify(res)
         
     
