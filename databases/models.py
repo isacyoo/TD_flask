@@ -41,7 +41,7 @@ class Location(db.Model):
     operational_hours = db.Column(db.String(256))
     stream_retention_hours = db.Column(db.Integer, default=24)
 
-    cameras = db.relationship("Camera", backref="location", innerjoin=True)
+    cameras = db.relationship("Camera", back_populates="location", innerjoin=True)
 
 class Camera(db.Model):
     __table_args__ = (db.UniqueConstraint('location_id', 'name', name='_location_name_uc'),)
@@ -60,6 +60,8 @@ class Camera(db.Model):
     y4 = db.Column(db.Float)
     nx = db.Column(db.Float)
     ny = db.Column(db.Float)
+
+    location = db.relationship("Location", back_populates="cameras", innerjoin=True)
     
 class Action(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'name', name='_user_name_uc'),)
@@ -78,6 +80,14 @@ class Event(db.Model):
     action_id = db.Column(db.Integer, db.ForeignKey(Action.id), index=True)
     status = db.Column(db.Integer, index=True, nullable=False)
 
+    entries = db.relationship("Entry", back_populates="event", innerjoin=True, lazy="joined")
+    location = db.relationship("Location", innerjoin=True, lazy="joined")
+    action = db.relationship("Action", lazy="joined")
+
+    @property
+    def entered_at(self):
+        return min(entry.entered_at for entry in self.entries)
+
 class Entry(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
     event_id = db.Column(db.String(36), db.ForeignKey(Event.id), nullable=False, index=True)
@@ -85,7 +95,8 @@ class Entry(db.Model):
     person_meta = db.Column(db.String(1024), default="{}")
     entered_at = db.Column(db.DateTime)
 
-    event = db.relationship("Event", backref="entries", innerjoin=True)
+    event = db.relationship("Event", back_populates="entries", innerjoin=True, lazy="joined")
+    videos = db.relationship("Video", back_populates="entry", innerjoin=True, lazy="joined")
     
 
 class Video(db.Model):
@@ -96,7 +107,7 @@ class Video(db.Model):
     status = db.Column(db.Integer, index=True, nullable=False)
     uploaded_at = db.Column(db.DateTime)
 
-    entry = db.relationship("Entry", backref="videos", innerjoin=True)
+    entry = db.relationship("Entry", back_populates="videos", innerjoin=True, lazy="joined")
     
     def set_status(self, new_status):
         self.status = new_status

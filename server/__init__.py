@@ -39,6 +39,7 @@ def register_blueprint(app):
         app.register_blueprint(action)
         app.register_blueprint(location)
         app.register_blueprint(schedule)
+        app.register_blueprint(event)
         db.create_all()
         
 

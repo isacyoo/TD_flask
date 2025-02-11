@@ -2,14 +2,14 @@ import json
 
 from marshmallow import Schema
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow.fields import Nested, Field
+from marshmallow.fields import Nested, Field, Integer
 
 from .models import *
 
 class JSONField(Field):
     def _serialize(self, value, attr, obj, **kwargs):
         if value is None or value == '':
-            return json.dumps({})
+            return {}
         return json.loads(value)
         
 class ActionSchema(SQLAlchemyAutoSchema):
@@ -31,7 +31,6 @@ class LocationSchema(SQLAlchemyAutoSchema):
 class VideoSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Video
-        fields = ('id', 'entry_id', 'uploaded_at', 'status')
 
 class EntrySchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -45,3 +44,9 @@ class EventSchema(SQLAlchemyAutoSchema):
         model = Event
 
     entries = Nested(EntrySchema, many=True)
+    location = Nested(LocationSchema, only=("id", "name"))
+    action = Nested(ActionSchema)
+
+class EventsPerLocationSchema(Schema):
+    location = Nested(LocationSchema, only=("id", "name"))
+    count = Integer()

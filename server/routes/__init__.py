@@ -5,3 +5,4 @@ from .upload import upload
 from .user import users
 from .video import video
 from .schedule import schedule
+from .event import event
