@@ -1,15 +1,20 @@
 import json
 
-from marshmallow import Schema
+from marshmallow import Schema, validates, ValidationError
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow.fields import Nested, Field, Integer
+from marshmallow.fields import Nested, Field, Integer, String, DateTime, Url
+from sqlalchemy import select
+from flask_jwt_extended import current_user
 
-from .models import *
+from .models import Action, Camera, Location, Video, Entry, Event, db
 
 class JSONField(Field):
     def _serialize(self, value, attr, obj, **kwargs):
         if value is None or value == '':
             return {}
+        return json.loads(value)
+    
+    def _deserialize(self, value, attr, data, **kwargs):
         return json.loads(value)
         
 class ActionSchema(SQLAlchemyAutoSchema):
@@ -50,3 +55,27 @@ class EventSchema(SQLAlchemyAutoSchema):
 class EventsPerLocationSchema(Schema):
     location = Nested(LocationSchema, only=("id", "name"))
     count = Integer()
+
+class EntryWebhookInputDataSchema(Schema):
+    location_id = Integer(required=True)
+    person_id = String(required=True)
+    entered_at = DateTime()
+    person_meta = JSONField()
+
+    @validates('location_id')
+    def check_location_exists(self, data, **kwargs):
+        location = db.session.execute(
+            select(Location).where(Location.user_id==current_user.id, Location.id==data["location_id"])).scalar_one_or_none()
+        
+        if not location:
+            raise ValidationError(f"Location {data} not found for user {current_user.id}")
+        else:
+            data["location"] = location
+
+class VideoPresignedUrlSchema(Schema):
+    presigned_url = Url()
+    video_id = String(required=True)
+
+class EntryWebhookResponseSchema(Schema):
+    videos = Nested(VideoPresignedUrlSchema, many=True, required=True)
+    entry_id = String(required=True)
