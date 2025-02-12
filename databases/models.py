@@ -90,7 +90,7 @@ class Event(db.Model):
 
 class Entry(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
-    event_id = db.Column(db.String(36), db.ForeignKey(Event.id), nullable=False, index=True)
+    event_id = db.Column(db.String(36), db.ForeignKey(Event.id))
     person_id = db.Column(db.String(36), index=True)
     person_meta = db.Column(db.String(1024), default="{}")
     entered_at = db.Column(db.DateTime)
@@ -101,7 +101,6 @@ class Entry(db.Model):
 
 class Video(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
-    user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False, index=True)
     camera_id = db.Column(db.Integer, db.ForeignKey(Camera.id), nullable=False)
     entry_id = db.Column(db.String(36), db.ForeignKey(Entry.id), index=True)
     status = db.Column(db.Integer, index=True, nullable=False)

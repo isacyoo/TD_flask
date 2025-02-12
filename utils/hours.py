@@ -134,19 +134,22 @@ class WeekSchedule:
         
         return dow_dict[day_type]
     
-    def check_operational(self, start_timestamp, timezone,
+    def check_operational(self, entered_at, timezone,
                           is_holiday, is_yesterday_holiday):
-        start_timestamp = convert_from_UTC(start_timestamp, timezone)
-        today = start_timestamp.strftime("%a").lower()
-        yesterday = start_timestamp - timedelta(days=1)
+        entered_at = convert_from_UTC(entered_at, timezone)
+        today = entered_at.strftime("%a").lower()
+        yesterday = entered_at - timedelta(days=1)
         yesterday = yesterday.strftime("%a").lower()
+
         if is_holiday:
             dow = 'pub'
         else:
             dow = today
+
         day_schedule = self.week_schedule[dow]
+        
         for run in day_schedule.runs:
-            if run.is_operational_at(start_timestamp, same_day=True):
+            if run.is_operational_at(entered_at, same_day=True):
                 return True
             
         if is_yesterday_holiday:
@@ -156,7 +159,7 @@ class WeekSchedule:
         
         day_schedule = self.week_schedule[dow]
         for run in day_schedule.runs:
-            if run.is_operational_at(start_timestamp, same_day=False):
+            if run.is_operational_at(entered_at, same_day=False):
                 return True
             
         return False
