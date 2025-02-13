@@ -5,7 +5,6 @@ from flask_jwt_extended import current_user
 from sqlalchemy.orm import lazyload
 
 from .models import *
-from utils.status_codes import EventStatusCode
 
 def query_events(location_id, person_id, time_range, action_ids, history=False, desc=True):
     if action_ids and not history:
@@ -13,7 +12,7 @@ def query_events(location_id, person_id, time_range, action_ids, history=False, 
 
     query = select(Event).join(Location).join(Entry).where(
         Location.user_id==current_user.id,
-        Event.status==EventStatusCode.REVIEW_READY,
+        Event.deleted_at.is_(None),
         Event.location_id==location_id
     )
 

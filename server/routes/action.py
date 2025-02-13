@@ -8,7 +8,6 @@ from sqlalchemy import select
 from databases import db, Action, Event
 from databases.schemas import ActionSchema
 from utils.auth import error_handler
-from utils.status_codes import EventStatusCode
 
 action = Blueprint("action", "__name__")
 
@@ -42,9 +41,9 @@ def apply_action_to_event(event_id, action_id):
         app.logger.info(f'Event id {event_id} not found | user id: {current_user.id}')
         return jsonify({"msg": f'Event id {event_id} not found'}), 404
     
-    if event.status != EventStatusCode.REVIEW_READY:
-        app.logger.info(f'Event id {event_id} has status {event.status} | user id: {current_user.id}')
-        return jsonify({"msg": f'Event does not have the right status code to perform this action'}), 400
+    if event.delete_at:
+        app.logger.info(f'Event id {event_id} is already deleted | user id: {current_user.id}')
+        return jsonify({"msg": f'Event id {event_id} is already deleted'}), 400
 
     action = db.session.execute(
         select(Action).where(

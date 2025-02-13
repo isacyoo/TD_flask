@@ -6,6 +6,8 @@ from flask_sqlalchemy.pagination import Pagination
 import sqlalchemy as sa
 from sqlalchemy import MetaData
 
+from utils.status_codes import EntryStatusCode, VideoStatusCode
+
 convention = {
     "ix": 'ix_%(column_0_label)s',
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -78,7 +80,6 @@ class Event(db.Model):
     reviewed_at = db.Column(db.DateTime)
     deleted_at = db.Column(db.DateTime)
     action_id = db.Column(db.Integer, db.ForeignKey(Action.id), index=True)
-    status = db.Column(db.Integer, index=True, nullable=False)
 
     entries = db.relationship("Entry", back_populates="event", innerjoin=True, lazy="joined")
     location = db.relationship("Location", innerjoin=True, lazy="joined")
@@ -90,10 +91,12 @@ class Event(db.Model):
 
 class Entry(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
-    event_id = db.Column(db.String(36), db.ForeignKey(Event.id))
+    event_id = db.Column(db.String(36), db.ForeignKey(Event.id), index=True)
     person_id = db.Column(db.String(36), index=True)
     person_meta = db.Column(db.String(1024), default="{}")
     entered_at = db.Column(db.DateTime)
+    status = db.Column(db.Enum(EntryStatusCode, values_callable=lambda c: [e.value for e in c]),
+                       default=EntryStatusCode.CREATED, index=True, nullable=False)
 
     event = db.relationship("Event", back_populates="entries", innerjoin=True, lazy="joined")
     videos = db.relationship("Video", back_populates="entry", innerjoin=True, lazy="joined")
@@ -103,7 +106,8 @@ class Video(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
     camera_id = db.Column(db.Integer, db.ForeignKey(Camera.id), nullable=False)
     entry_id = db.Column(db.String(36), db.ForeignKey(Entry.id), index=True)
-    status = db.Column(db.Integer, index=True, nullable=False)
+    status = db.Column(db.Enum(VideoStatusCode, values_callable=lambda c: [e.value for e in c]),
+                       default=VideoStatusCode.CREATED, index=True, nullable=False)
     uploaded_at = db.Column(db.DateTime)
 
     entry = db.relationship("Entry", back_populates="videos", innerjoin=True, lazy="joined")
