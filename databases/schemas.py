@@ -52,7 +52,7 @@ class EventSchema(SQLAlchemyAutoSchema):
     location = Nested(LocationSchema, only=("id", "name"))
     action = Nested(ActionSchema)
 
-class EventsPerLocationSchema(Schema):
+class CountPerLocationSchema(Schema):
     location = Nested(LocationSchema, only=("id", "name"))
     count = Integer()
 
@@ -79,3 +79,15 @@ class VideoPresignedUrlSchema(Schema):
 class EntryWebhookResponseSchema(Schema):
     videos = Nested(VideoPresignedUrlSchema, many=True, required=True)
     entry_id = String(required=True)
+
+class StatsSchema(Schema):
+    unreviewed = Integer()
+    entries = Integer()
+    in_process = Integer()
+class LocationStatsSchema(Schema):
+    location = Nested(LocationSchema, only=("id", "name"))
+    stats = Nested(StatsSchema)
+
+class StatsSchema(Schema):
+    total_unreviewed = Integer()
+    location_stats = Nested(LocationStatsSchema, many=True)
