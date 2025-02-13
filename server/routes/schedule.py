@@ -12,6 +12,25 @@ from utils.hours import WeekSchedule
 
 schedule = Blueprint("schedule", "__name__")
 
+@schedule.get('/schedule/<location_id>')
+@error_handler()
+def get_location_schedule(location_id):
+    location = db.session.execute(
+        select(Location).where(Location.user_id==current_user.id, Location.id==location_id)).scalar_one_or_none()
+    
+    if not location:
+        app.logger.info(f'Location id {location_id} not found with {current_user.id}')
+        return jsonify({"msg": "Location not found"}), 404
+    
+    operational_hours = json.loads(location.operational_hours)
+    valid = WeekSchedule(operational_hours).check_week_schedule_validity()
+
+    if not valid:
+        return jsonify({"msg": "Invalid schedule"}), 400
+
+    return jsonify(operational_hours), 200
+    
+
 @schedule.post('/schedule/<location_id>')
 @error_handler()
 def modify_location_schedule(location_id):
@@ -29,6 +48,7 @@ def modify_location_schedule(location_id):
     new_schedule = request.json
     week_schedule = WeekSchedule(new_schedule)
     valid = week_schedule.check_week_schedule_validity()
+
     if not valid:
         app.logger.info(f'Invalid schedule with {current_user.id}')
         return jsonify({"msg": "Invalid schedule"}), 400
