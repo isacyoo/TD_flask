@@ -129,7 +129,7 @@ def get_total_unreviewed_events():
     return db.session.execute(query).scalar()
 
 def get_total_unreviewed_events_per_location():
-    query = select(Location, func.count()).select_from(Event).join(Location).where(
+    query = select(Location, func.count(Event.id)).select_from(Location).join(Event, isouter=True).where(
         Location.user_id==current_user.id,
         Event.deleted_at.is_(None),
         Event.action_id.is_(None)).group_by(Location.id)
@@ -139,7 +139,7 @@ def get_total_unreviewed_events_per_location():
     return CountPerLocationSchema(many=True).dump({"location": r[0], "count": r[1]} for r in res)
 
 def get_total_entries_per_location(hours):
-    query = select(Location, func.count()).select_from(Event).join(Location).join(Entry).where(
+    query = select(Location, func.count()).select_from(Location).join(Event).join(Entry).where(
         Location.user_id==current_user.id,
         Entry.entered_at >= datetime.now(timezone.utc) - timedelta(hours=hours)).group_by(Location.id)
     
@@ -148,7 +148,7 @@ def get_total_entries_per_location(hours):
     return CountPerLocationSchema(many=True).dump({"location": r[0], "count": r[1]} for r in res)
 
 def get_total_number_in_process_per_location(hours):
-    query = select(Location, func.count()).select_from(Event).join(Location).join(Entry).where(
+    query = select(Location, func.count()).select_from(Location).join(Event).join(Entry).where(
         Location.user_id==current_user.id,
         Entry.status.in_([EntryStatusCode.CREATED, EntryStatusCode.PROCESS_READY]),
         Entry.entered_at >= datetime.now(timezone.utc) - timedelta(hours=hours)).group_by(Location.id)
