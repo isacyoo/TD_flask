@@ -71,7 +71,7 @@ class Action(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False)
     name = db.Column(db.String(36), nullable=False)
     is_tailgating = db.Column(db.Boolean)
-    is_deleted = db.Column(db.Boolean)
+    is_deleted = db.Column(db.Boolean, default=False)
 
 class Event(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
@@ -79,6 +79,7 @@ class Event(db.Model):
     processed_at = db.Column(db.DateTime)
     reviewed_at = db.Column(db.DateTime)
     deleted_at = db.Column(db.DateTime)
+    is_merged = db.Column(db.Boolean, default=False)
     action_id = db.Column(db.Integer, db.ForeignKey(Action.id), index=True)
 
     entries = db.relationship("Entry", back_populates="event", innerjoin=True, lazy="joined")
