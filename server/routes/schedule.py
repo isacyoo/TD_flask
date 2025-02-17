@@ -8,7 +8,7 @@ from sqlalchemy import select
 from databases import db, Location, RTSPInfo, Camera
 from clients import sqs_client
 from utils.auth import error_handler
-from utils.hours import WeekSchedule
+from utils.hours import WeekSchedule, InvalidScheduleException
 
 schedule = Blueprint("schedule", "__name__")
 
@@ -23,12 +23,33 @@ def get_location_schedule(location_id):
         return jsonify({"msg": "Location not found"}), 404
     
     operational_hours = json.loads(location.operational_hours)
-    valid = WeekSchedule(operational_hours).check_week_schedule_validity()
+    try:
+        schedule = WeekSchedule(operational_hours)
+    except InvalidScheduleException:
+        return jsonify({"msg": "Invalid schedule"}), 400
+    
+    valid = schedule.check_week_schedule_validity()
 
     if not valid:
         return jsonify({"msg": "Invalid schedule"}), 400
 
-    return jsonify(operational_hours), 200
+    return jsonify(schedule.to_dict()), 200
+
+@schedule.post('/validate_schedule')
+@error_handler()
+def validate_schedule():
+    schedule = request.json
+    try:
+        week_schedule = WeekSchedule(schedule)
+    except InvalidScheduleException:
+        return jsonify({"input_valid": False, "valid": False}), 200
+    
+    valid = week_schedule.check_week_schedule_validity()
+
+    if not valid:
+        return jsonify({"input_valid": True, "valid": False}), 200
+
+    return jsonify({"input_valid": True, "valid": True}), 200
     
 
 @schedule.post('/schedule/<location_id>')
@@ -41,12 +62,13 @@ def modify_location_schedule(location_id):
         app.logger.info(f'Location id {location_id} not found with {current_user.id}')
         return jsonify({"msg": "Location not found"}), 404
     
-    if not location.upload_method.value == 'RTSP':
-        app.logger.info(f'Location id {location_id} is not configured with RTSP')
-        return jsonify({"msg": "Location not configured with RTSP"}), 400
-    
     new_schedule = request.json
-    week_schedule = WeekSchedule(new_schedule)
+    try:
+        week_schedule = WeekSchedule(new_schedule)
+    except InvalidScheduleException:
+        app.logger.info(f'Invalid schedule with {current_user.id}')
+        return jsonify({"msg": "Invalid schedule"}), 400
+    
     valid = week_schedule.check_week_schedule_validity()
 
     if not valid:

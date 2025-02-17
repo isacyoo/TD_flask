@@ -15,12 +15,16 @@ def convert_to_UTC(time_to_convert, tz):
     
     return time_to_convert.replace(tzinfo=tz).astimezone(utc)
 
+class InvalidScheduleException(Exception):
+    pass
+
 class SingleRun:
     def __init__(self, start_time, duration):
 
         self.start_time = time.fromisoformat(start_time)
         if duration > 24:
-            raise Exception('Invalid duration amount')
+            raise InvalidScheduleException('Invalid duration amount')
+        
         self.duration = timedelta(hours=duration)
 
     def does_not_overlap_with(self, next, same_day):
@@ -55,10 +59,20 @@ class SingleRun:
             )
             end = start + self.duration
             return start < timestamp < end
+        
+    def to_dict(self):
+        return {
+            "start_time": self.start_time.isoformat(),
+            "duration": self.duration.total_seconds() / 3600
+        }
 
 class DaySchedule:
     def __init__(self, runs):
-        self.runs = [SingleRun(**run) for run in runs]
+        try:
+            self.runs = [SingleRun(**run) for run in runs]
+        except:
+            raise InvalidScheduleException('Invalid schedule')
+        
         self.runs.sort(
             key=lambda run: run.start_time
         )
@@ -70,6 +84,9 @@ class DaySchedule:
             subsequent_run = self.runs[i+1]
             valid = run.does_not_overlap_with(next=subsequent_run,
                                              same_day=True)
+            if not valid:
+                break
+            
         return valid
     
     def first(self,):
@@ -81,19 +98,22 @@ class DaySchedule:
         if self.runs:
             return self.runs[-1]
         return None
+    
+    def to_dict(self):
+        return [run.to_dict() for run in self.runs]
 class WeekSchedule:
     day_types = ('mon', 'tue', 'wed', 'thu',
                  'fri', 'sat', 'sun', 'pub')
     
-    def __init__(self, run_schedule): 
-        if set(run_schedule.keys()) != set(self.day_types):
-            raise Exception('Invalid day type')
+    def __init__(self, run_schedule):
+        try:
+            self.week_schedule = {
+                day_type: DaySchedule(run_schedule.get(day_type, []))
+                for day_type in self.day_types
+            }
+        except:
+            raise InvalidScheduleException('Invalid schedule')
         
-        self.week_schedule = {
-            day_type: DaySchedule(day_schedule)
-            for day_type, day_schedule in run_schedule.items()
-        }
-
     def check_all_day_schedule_validity(self,):
         app.logger.debug(f"Checking all day schedule validity")
         day_validity = [
@@ -163,3 +183,9 @@ class WeekSchedule:
                 return True
             
         return False
+    
+    def to_dict(self):
+        return {
+            day_type: day_schedule.to_dict()
+            for day_type, day_schedule in self.week_schedule.items()
+        }

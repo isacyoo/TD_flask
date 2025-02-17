@@ -7,6 +7,7 @@ from flask import current_app as app, jsonify
 from flask import request
 from flask_jwt_extended import get_jwt, verify_jwt_in_request, current_user
 from sqlalchemy import select
+from werkzeug.exceptions import BadRequest
 
 from databases import User, db
     
@@ -39,6 +40,10 @@ def error_handler(web=True, api=True, admin=False):
                     return jsonify({"msg": "Unauthorized"}), 401
             try:
                 return fn(*args, **kwargs)
+            
+            except BadRequest as e:
+                return jsonify({"msg": "Malformed request"}), 400
+            
             except Exception as e:
                 app.logger.warning(f'User id: {current_user.id} || location: {fn} || error {traceback.format_exc()}')
                 return jsonify({"msg": "Method unsuccessful"}), 400
