@@ -8,7 +8,7 @@ from sqlalchemy import select, func
 from clients import s3_client
 from utils.auth import error_handler
 from utils.metrics import timeit, fail_counter
-from databases import db, Video, Location
+from databases import db, Video, Camera, Location
 
 video = Blueprint("video", "__name__")
         
@@ -17,10 +17,11 @@ video = Blueprint("video", "__name__")
 @fail_counter
 @error_handler()
 def get_video(id):
+    
     video = db.session.execute(
-        select(Video).where(
-            Video.user_id==current_user.id, 
-            Video.id==id)).scalar_one_or_none()
+        select(Video).join(Camera).join(Location).where(
+            Location.user_id==current_user.id, 
+            Video.id==id)).unique().scalar_one_or_none()
 
     if not video:
         app.logger.info(f'Video id {id} not found | user id: {current_user.id}')

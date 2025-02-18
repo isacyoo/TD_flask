@@ -48,9 +48,11 @@ class EventSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Event
 
+
     entries = Nested(EntrySchema, many=True)
     location = Nested(LocationSchema, only=("id", "name"))
     action = Nested(ActionSchema)
+    entered_at = DateTime(attribute="entered_at")
 
 class CountPerLocationSchema(Schema):
     location = Nested(LocationSchema, only=("id", "name"))
