@@ -1,5 +1,3 @@
-from datetime import datetime, timezone, timedelta
-
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
@@ -9,9 +7,7 @@ from werkzeug.exceptions import NotFound
 from utils.auth import error_handler
 from utils.metrics import timeit
 from databases import db, Location, query_events, get_page_info, Event, parse_time_range, query_adjacent_events, Entry
-from databases.schemas import EventSchema, CountPerLocationSchema, StatsSchema
-from utils.status_codes import EntryStatusCode
-from utils.stats import LocationStats, LocationInfo, Stats
+from databases.schemas import EventSchema
 
 event = Blueprint("event", "__name__")
 PER_PAGE = 1
@@ -101,7 +97,7 @@ def get_adjacent_events(id):
         app.logger.info(f'Adjacent events could not be found as the events does not exist: {current_user.id} - {id}')
         return jsonify({"msg": "Event not found"}), 404
 
-    if current_event.delete_at:
+    if current_event.deleted_at:
         app.logger.info(f'Adjacent events could not be found as the event is deleted: {current_user.id} - {id}')
         return jsonify({"msg": "Event is deleted"}), 400
         
@@ -120,80 +116,17 @@ def get_adjacent_events(id):
         
     return jsonify({"next_event": next_event, "previous_event": previous_event})
 
-def get_total_unreviewed_events():
-    query = select(func.count()).select_from(Event).join(Location).where(
-        Location.user_id==current_user.id,
-        Event.deleted_at.is_(None),
-        Event.action_id.is_(None))
-
-    return db.session.execute(query).scalar()
-
-def get_total_unreviewed_events_per_location():
-    query = select(Location, func.count(Event.id)).select_from(Location).join(Event, isouter=True).where(
-        Location.user_id==current_user.id,
-        Event.deleted_at.is_(None),
-        Event.action_id.is_(None)).group_by(Location.id)
-    
-    res = db.session.execute(query).all()
-    
-    return CountPerLocationSchema(many=True).dump({"location": r[0], "count": r[1]} for r in res)
-
-def get_total_entries_per_location(hours):
-    query = select(Location, func.count()).select_from(Location).join(Event).join(Entry).where(
-        Location.user_id==current_user.id,
-        Entry.entered_at >= datetime.now(timezone.utc) - timedelta(hours=hours)).group_by(Location.id)
-    
-    res = db.session.execute(query).all()
-    
-    return CountPerLocationSchema(many=True).dump({"location": r[0], "count": r[1]} for r in res)
-
-def get_total_number_in_process_per_location(hours):
-    query = select(Location, func.count()).select_from(Location).join(Event).join(Entry).where(
-        Location.user_id==current_user.id,
-        Entry.status.in_([EntryStatusCode.CREATED, EntryStatusCode.PROCESS_READY]),
-        Entry.entered_at >= datetime.now(timezone.utc) - timedelta(hours=hours)).group_by(Location.id)
-    
-    res = db.session.execute(query).all()
-    
-    return CountPerLocationSchema(many=True).dump({"location": r[0], "count": r[1]} for r in res)
-
-def merge_stats(unreviewed, entries, in_process):
-    all_stats = {}
-
-    def update_stats(location, stats_name, count):
-        if location["id"] in all_stats:
-            setattr(all_stats[location["id"]].stats, stats_name, count)
-        else:
-            all_stats[location["id"]] = LocationStats(location=LocationInfo(**location),
-                                                      stats=Stats(**{stats_name: count}))
-
-    for r in unreviewed:
-        update_stats(r["location"], "unreviewed", r["count"])
-
-    for r in entries:
-        update_stats(r["location"], "entries", r["count"])
-
-    for r in in_process:
-        update_stats(r["location"], "in_process", r["count"])
-
-    return list(all_stats.values())
-
-
-@event.get("/current_stats")
+@event.get("/event/<id>")
 @error_handler()
-def get_current_stats():
-    hours = int(request.args.get("hours", "24"))
-
-    unreviewed_events_per_location = get_total_unreviewed_events_per_location()
-    total_unreviewed = sum([r["count"] for r in unreviewed_events_per_location])
-    total_entries_per_location = get_total_entries_per_location(hours)
-    total_in_process_per_location = get_total_number_in_process_per_location(hours)
-
-    all_stats = merge_stats(unreviewed_events_per_location,
-                            total_entries_per_location,
-                            total_in_process_per_location)
+def get_event(id) -> Response:
+    event = db.session.execute(
+        select(Event).join(Location).where(
+            Event.id==id,
+            Location.user_id==current_user.id)).unique().scalars().one_or_none()
     
-    stats = StatsSchema().dump({"total_unreviewed": total_unreviewed,
-                                         "location_stats": all_stats})
+    if not event:
+        return jsonify({"msg": "Event not found"}), 404
+
+    event = EventSchema().dump(event)
     
-    return jsonify(stats)
+    return jsonify(event)

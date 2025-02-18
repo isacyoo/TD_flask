@@ -7,6 +7,7 @@ class VideoStatusCode(Enum):
     UPLOAD_COMPLETED = "310"
     UPLOAD_FAILED = "410"
     PROCESS_READY = "120"
+    REVIEW_READY = "130"
     DELETED = "900"
 
 class EntryStatusCode(Enum):
