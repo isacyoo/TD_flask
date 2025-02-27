@@ -70,10 +70,12 @@ def query_adjacent_events(current_event, person_id, action_ids):
     
     next_query = query_events(current_event.location_id, person_id, None, action_ids, history).where(
         Entry.entered_at < current_event.entered_at,
+        Event.id != current_event.id
     ).limit(1)
 
     prev_query = query_events(current_event.location_id, person_id, None, action_ids, history, desc=False).where(
         Entry.entered_at > current_event.entered_at,
+        Event.id != current_event.id
     ).limit(1)
 
     return next_query, prev_query

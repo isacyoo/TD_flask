@@ -33,7 +33,7 @@ def get_unreviewed_events(location_id, page) -> Response:
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
 
-    query = query_events(location_id, person_id, time_range, None)
+    query = query_events(location_id, person_id, time_range, None).group_by(Event.id)
     
     try:
         unreviewed_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
@@ -68,7 +68,7 @@ def get_history_events(location_id, page) -> Response:
     person_id = request.args.get("personId", None)
     time_range = parse_time_range(request.args.get('time', None))
 
-    query = query_events(location_id, person_id, time_range, action_ids, True)
+    query = query_events(location_id, person_id, time_range, action_ids, True).group_by(Event.id)
 
     try:
         history_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
