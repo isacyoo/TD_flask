@@ -62,7 +62,7 @@ class SingleRun:
         
     def to_dict(self):
         return {
-            "start_time": self.start_time.isoformat(),
+            "start_time": self.start_time.isoformat(timespec="minutes"),
             "duration": self.duration.total_seconds() / 3600
         }
 
