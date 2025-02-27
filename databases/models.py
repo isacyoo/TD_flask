@@ -30,6 +30,7 @@ class User(db.Model):
     name = db.Column(db.String(36), nullable=False)
     password = db.Column(db.String(256), nullable=False)
     api_key = db.Column(db.String(1024))
+    api_key_expiry_date = db.Column(db.DateTime)
     is_admin = db.Column(db.Boolean, default=False)
     video_retention_period = db.Column(db.Integer, default=30)
     timezone = db.Column(db.String(40), default='Pacific/Auckland')
@@ -71,6 +72,7 @@ class Action(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False)
     name = db.Column(db.String(36), nullable=False)
     is_tailgating = db.Column(db.Boolean)
+    is_enabled = db.Column(db.Boolean, default=True)
     is_deleted = db.Column(db.Boolean, default=False)
 
 class Event(db.Model):

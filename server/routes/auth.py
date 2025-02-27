@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
@@ -80,12 +80,15 @@ def reset_api_key():
                                 additional_claims={'is_admin': current_user.is_admin,
                                                    'is_api': True},
                                 expires_delta=timedelta(weeks=52))
+    hashed_token = sha256_crypt.hash(token, rounds=1000)
     
-    current_user.api_key = token
+    expiry_date = datetime.now(tz=timezone.utc) + timedelta(weeks=52)
+    current_user.api_key = hashed_token
+    current_user.api_key_expiry_date = expiry_date
     db.session.commit()
     app.logger.info(f'API_KEY reset successful for user {current_user.id}')
     return jsonify({"msg": "API key reset successful. This API key will be valid for the next 52 weeks.", 
-                    "api_key" : token}), 201
+                    "api_key" : token, "expiry_date": expiry_date}), 201
 
 @auth.get('/api_key')
 @error_handler()

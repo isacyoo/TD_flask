@@ -20,6 +20,15 @@ def validate_login(id, password):
     
     return verified, user
 
+def get_raw_jwt_from_header():
+    header = request.headers.get("Authorization", None)
+    if not header:
+        return None
+    parts = split(" ", header)
+    if len(parts) != 2:
+        return None
+    return parts[1]
+
 def error_handler(web=True, api=True, admin=False):
     def inner(fn):
         @wraps(fn)
@@ -38,6 +47,17 @@ def error_handler(web=True, api=True, admin=False):
                 if not claims["is_admin"]:
                     app.logger.warning('Unauthorized user attempted an admin-only API')
                     return jsonify({"msg": "Unauthorized"}), 401
+                
+            if claims.get("is_api"):   
+                raw_jwt = get_raw_jwt_from_header()
+                if not raw_jwt:
+                    app.logger.warning('Malformed request')
+                    return jsonify({"msg": "Use Authorization request header when using your API key"}), 400
+                
+                if not sha256_crypt.verify(raw_jwt, current_user.api_key):
+                    app.logger.warning('Using revoked API key')
+                    return jsonify({"msg": "Your API Key has been revoked. Use the latest key to access the API or reset your key"}), 401
+                
             try:
                 return fn(*args, **kwargs)
             
