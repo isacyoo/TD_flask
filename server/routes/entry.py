@@ -6,40 +6,21 @@ from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select
-from marshmallow import ValidationError
 
-from databases import db, Video, Camera, RTSPInfo, Location, Entry, Event
-from databases.schemas import EntryWebhookInputDataSchema, EntryWebhookResponseSchema
+from databases import db, Video, RTSPInfo, Location, Entry, Event
+from databases.schemas import EntryWebhookResponseSchema
 from utils.auth import error_handler
 from utils.upload import *
-from utils.hours import convert_to_UTC, WeekSchedule
+from utils.hours import convert_to_UTC
 from utils.metrics import timeit, fail_counter
 from utils.status_codes import EntryStatusCode, VideoStatusCode
+from utils.entry import parse_input_data, check_operational
+
 
 DUPLICATE_THRESHOLD = 5.0
 PRECEDE_THRESHOLD = 5.0
 VIDEO_LENGTH = 10.0
 entry = Blueprint("entry", "__name__")
-
-def parse_input_data(data):
-    try:
-        result = EntryWebhookInputDataSchema().load(data)
-        return result
-    except ValidationError as e:
-        app.logger.info(f"Error parsing JSON data: {e}")
-        return None
-    
-def check_operational(location, current_time):
-    operational_hours = location.operational_hours
-
-    if not operational_hours:
-        app.logger.info(f"Operational hours not found for location {location.name}")
-        return False
-        
-    week_schedule = WeekSchedule(json.loads(operational_hours))
-    is_operational = week_schedule.check_operational(current_time, current_user.timezone, False, False)
-
-    return is_operational
 
 @entry.post("/entry")
 @error_handler(web=False)
