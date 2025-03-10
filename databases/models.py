@@ -94,7 +94,7 @@ class Event(db.Model):
 
 class Entry(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
-    event_id = db.Column(db.String(36), db.ForeignKey(Event.id), index=True)
+    event_id = db.Column(db.String(36), db.ForeignKey(Event.id), index=True, nullable=False)
     person_id = db.Column(db.String(36), index=True)
     person_meta = db.Column(db.String(1024), default="{}")
     entered_at = db.Column(db.DateTime)

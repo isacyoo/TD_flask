@@ -67,12 +67,10 @@ class EntryWebhookInputDataSchema(Schema):
     @validates('location_id')
     def check_location_exists(self, data, **kwargs):
         location = db.session.execute(
-            select(Location).where(Location.user_id==current_user.id, Location.id==data["location_id"])).scalar_one_or_none()
+            select(Location).where(Location.user_id==current_user.id, Location.id==data)).scalar_one_or_none()
         
         if not location:
             raise ValidationError(f"Location {data} not found for user {current_user.id}")
-        else:
-            data["location"] = location
 
 class VideoPresignedUrlSchema(Schema):
     presigned_url = Url()
