@@ -14,16 +14,16 @@ def user_upload(videos):
     return presigned_urls
 
 def rtsp_upload(videos, streams, start_timestamps, end_timestamps):
-    queue_url = sqs_client.get_queue_url(QueueName=os.getenv('VIDEO_CREATION_QUEUE'))['QueueUrl'],
+    queue_url = sqs_client.get_queue_url(QueueName=os.getenv('VIDEO_CREATION_QUEUE'))['QueueUrl']
     for video, stream, start_timestamp, end_timestamp in zip(videos,
                                                                 streams,
                                                                 start_timestamps,
                                                                 end_timestamps):
         message = {
             "video": {"id": video.id},
-            "stream_name": stream,
-            "start_timestamp": start_timestamp,
-            "end_timestamp": end_timestamp
+            "stream_name": str(stream),
+            "start_timestamp": start_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            "end_timestamp": end_timestamp.strftime('%Y-%m-%d %H:%M:%S')
         }
         sqs_client.send_message(
             QueueUrl=queue_url,
