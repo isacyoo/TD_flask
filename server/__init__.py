@@ -33,13 +33,13 @@ def register_blueprint(app):
     
     with app.app_context():
         app.register_blueprint(users)
+        app.register_blueprint(upload)
         app.register_blueprint(auth)
         app.register_blueprint(video)
         app.register_blueprint(action)
         app.register_blueprint(location)
         app.register_blueprint(schedule)
         app.register_blueprint(event)
-        app.register_blueprint(entry)
         db.create_all()
         
 
