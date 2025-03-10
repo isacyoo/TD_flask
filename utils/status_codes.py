@@ -2,9 +2,7 @@ from enum import Enum
 
 class VideoStatusCode(Enum):
     CREATED = "100"
-    UPLOAD_READY = "110"
     UPLOAD_IN_PROGRESS = "210"
-    UPLOAD_COMPLETED = "310"
     UPLOAD_FAILED = "410"
     PROCESS_READY = "120"
     REVIEW_READY = "130"

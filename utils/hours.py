@@ -47,16 +47,16 @@ class SingleRun:
         
     def is_operational_at(self, timestamp, same_day):
         if same_day:
-            start = datetime.fromisoformat(
-                self.start_time.strftime(f"{timestamp.year}-{timestamp.month}-{timestamp.day} %H:%M:%S")
-            )
+            start = timestamp.replace(hour=self.start_time.hour,
+                                      minute=self.start_time.minute,
+                                      second=self.start_time.second)
             end = start + self.duration
             return start < timestamp < end
         else:
             yesterday = timestamp - timedelta(days=1)
-            start = datetime.fromisoformat(
-                self.start_time.strftime(f"{yesterday.year}-{yesterday.month}-{yesterday.day} %H:%M:%S")
-            )
+            start = yesterday.replace(hour=self.start_time.hour,
+                                      minute=self.start_time.minute,
+                                      second=self.start_time.second)
             end = start + self.duration
             return start < timestamp < end
         
