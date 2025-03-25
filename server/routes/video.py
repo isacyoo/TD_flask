@@ -9,7 +9,7 @@ from sqlalchemy import select
 from clients import s3_client
 from utils.auth import error_handler
 from utils.metrics import timeit, fail_counter
-from utils.video import get_video
+from utils.video import get_video, send_video_to_queue
 from utils.status_codes import VideoStatusCode, EntryStatusCode
 from databases import db, Video, Camera, Location
 
@@ -93,6 +93,10 @@ def confirm_upload(id):
         video.entry.status = EntryStatusCode.PROCESS_READY
     
     db.session.commit()
+
+    camera = db.session.execute(
+        select(Camera).where(Camera.id==video.camera_id)).scalar_one_or_none()
+    send_video_to_queue(video, camera)
 
     return jsonify({"msg": "Upload success"}), 201
 

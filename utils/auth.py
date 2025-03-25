@@ -65,7 +65,7 @@ def error_handler(web=True, api=True, admin=False):
                 return jsonify({"msg": "Malformed request"}), 400
             
             except Exception as e:
-                app.logger.warning(f'User id: {current_user.id} || location: {fn} || error {traceback.format_exc()}')
+                app.logger.warning(f'User id: {current_user.id} || location: {fn}\n{traceback.format_exc()}')
                 return jsonify({"msg": "Method unsuccessful"}), 400
             
         return wrapper

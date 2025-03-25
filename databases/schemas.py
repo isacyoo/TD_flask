@@ -84,6 +84,7 @@ class StatsSchema(Schema):
     unreviewed = Integer()
     entries = Integer()
     in_process = Integer()
+
 class LocationStatsSchema(Schema):
     location = Nested(LocationSchema, only=("id", "name"))
     stats = Nested(StatsSchema)

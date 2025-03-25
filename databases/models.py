@@ -53,6 +53,7 @@ class Camera(db.Model):
     display_order = db.Column(db.Integer)
     name = db.Column(db.String(36))
     threshold = db.Column(db.Float)
+    minimum_time = db.Column(db.Float)
     x1 = db.Column(db.Float)
     y1 = db.Column(db.Float)
     x2 = db.Column(db.Float)
