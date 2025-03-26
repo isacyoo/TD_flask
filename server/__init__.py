@@ -22,6 +22,8 @@ def create_app():
         return user
     
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
+    app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
+    app.config["JWT_COOKIE_SAMESITE"] = "Strict"
     app.config.from_prefixed_env()
     db.init_app(app)
     jwt.init_app(app)

@@ -1,10 +1,7 @@
-import os
-
-from dotenv import load_dotenv
 from prometheus_client import multiprocess, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST
 
-if os.path.exists('./.env'):
-    load_dotenv(override=True)
+from utils.env import set_env_vars
+set_env_vars()
 
 from server import create_app, register_blueprint
 

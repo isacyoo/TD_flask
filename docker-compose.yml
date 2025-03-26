@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  backend:
+    image: 524449828506.dkr.ecr.ap-southeast-2.amazonaws.com/ecs/backend:latest
+    ports:
+      - "5000:5000"
+    networks:
+      - my-network
+  frontend:
+    image: 524449828506.dkr.ecr.ap-southeast-2.amazonaws.com/ecs/frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://backend:5000
+    networks:
+      - my-network
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - my-network
+networks:
+  my-network:
+    driver: bridge

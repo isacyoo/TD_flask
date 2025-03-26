@@ -94,3 +94,8 @@ def reset_api_key():
 @error_handler()
 def get_api_key():
     return jsonify({"api_key" : current_user.api_key})
+
+@auth.get("/is_authenticated")
+@error_handler()
+def is_authenticated():
+    return jsonify({"is_authenticated": True})
