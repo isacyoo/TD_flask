@@ -41,7 +41,7 @@ def query_events(location_id, person_id, time_range, action_ids, history=False, 
     return query
 
 
-def get_page_info(paginate, iter_pages_count=3):
+def get_page_info(paginate, iter_pages_count=1):
     iter_pages = list(paginate.iter_pages(left_current=iter_pages_count,
                                      right_current=iter_pages_count))
     return {

@@ -68,7 +68,6 @@ class Camera(db.Model):
     location = db.relationship("Location", back_populates="cameras", innerjoin=True)
     
 class Action(db.Model):
-    __table_args__ = (db.UniqueConstraint('user_id', 'name', name='_user_name_uc'),)
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False)
     name = db.Column(db.String(36), nullable=False)

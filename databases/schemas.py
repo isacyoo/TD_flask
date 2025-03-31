@@ -7,6 +7,7 @@ from sqlalchemy import select
 from flask_jwt_extended import current_user
 
 from .models import Action, Camera, Location, Video, Entry, Event, db
+from utils.hours import WeekSchedule, InvalidScheduleException
 
 class JSONField(Field):
     def _serialize(self, value, attr, obj, **kwargs):
@@ -15,7 +16,7 @@ class JSONField(Field):
         return json.loads(value)
     
     def _deserialize(self, value, attr, data, **kwargs):
-        return json.loads(value)
+        return json.dumps(value)
         
 class ActionSchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -26,12 +27,23 @@ class CameraSchema(SQLAlchemyAutoSchema):
         model = Camera
         fields = ('id', 'name')
 
+class ScheduleField(Field):
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value is None or value == '':
+            return {}
+        schedule = json.loads(value)
+        try:
+            week_schedule = WeekSchedule(schedule)
+            return week_schedule.to_dict()
+        except InvalidScheduleException:
+            return {}
+
 class LocationSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Location
     
     cameras = Nested(CameraSchema, many=True)
-    operational_hours = JSONField()
+    operational_hours = ScheduleField()
 
 class VideoSchema(SQLAlchemyAutoSchema):
     class Meta:
