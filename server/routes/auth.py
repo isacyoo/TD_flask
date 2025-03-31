@@ -3,7 +3,7 @@ from datetime import timedelta, datetime, timezone
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import create_access_token, create_refresh_token, current_user, \
-    set_access_cookies, set_refresh_cookies, unset_jwt_cookies
+    set_access_cookies, set_refresh_cookies, unset_jwt_cookies, jwt_required
 from passlib.hash import sha256_crypt
 from sqlalchemy import select
 
@@ -48,6 +48,18 @@ def logout() -> Response:
     unset_jwt_cookies(response)
     app.logger.debug(f'Logout successful for user id {current_user.id}')
     return response, 201
+
+@auth.post("/refresh")
+@jwt_required(refresh=True)
+def refresh() -> Response:
+    identity = current_user.id
+    token = create_access_token(identity=identity, 
+                                additional_claims={'is_admin': current_user.is_admin,
+                                                   'is_api': False})
+    res = jsonify({"access_token": token})
+
+    return res, 201
+    
 
 @auth.post('/reset_password')
 @error_handler(web=False)
@@ -99,3 +111,7 @@ def get_api_key():
 @error_handler()
 def is_authenticated():
     return jsonify({"is_authenticated": True})
+
+@auth.get("/healthz")
+def healthz():
+    return jsonify({"status": "ok"}), 200
