@@ -6,7 +6,7 @@ from sqlalchemy.orm import lazyload
 
 from .models import *
 
-def query_events(location_id, person_id, time_range, action_ids, history=False, desc=True):
+def query_events(location_id, member_id, time_range, action_ids, history=False, desc=True, saved=False):
     if action_ids and not history:
         raise ValueError("Cannot query videos with action_ids without history=True")
 
@@ -21,8 +21,8 @@ def query_events(location_id, person_id, time_range, action_ids, history=False, 
     else:
         query = query.where(Event.action_id.is_(None))
 
-    if person_id:
-        query = query.where(Entry.person_id==person_id)
+    if member_id:
+        query = query.where(Entry.member_id==member_id)
 
     if time_range:
         start_time = datetime.now(timezone.utc) - timedelta(seconds=int(time_range))
@@ -37,6 +37,9 @@ def query_events(location_id, person_id, time_range, action_ids, history=False, 
     else:
         query = query.order_by(
             Entry.entered_at)
+        
+    if saved:
+        query = query.where(Event.is_saved==True)
     
     return query
 
@@ -65,15 +68,15 @@ def parse_time_range(time_range):
     
     return None
 
-def query_adjacent_events(current_event, person_id, action_ids):
+def query_adjacent_events(current_event, member_id, action_ids):
     history = current_event.action_id is not None
     
-    next_query = query_events(current_event.location_id, person_id, None, action_ids, history).where(
+    next_query = query_events(current_event.location_id, member_id, None, action_ids, history).where(
         Entry.entered_at < current_event.entered_at,
         Event.id != current_event.id
     ).limit(1)
 
-    prev_query = query_events(current_event.location_id, person_id, None, action_ids, history, desc=False).where(
+    prev_query = query_events(current_event.location_id, member_id, None, action_ids, history, desc=False).where(
         Entry.entered_at > current_event.entered_at,
         Event.id != current_event.id
     ).limit(1)

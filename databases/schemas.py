@@ -11,13 +11,14 @@ from utils.hours import WeekSchedule, InvalidScheduleException
 
 class JSONField(Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        if value is None or value == '':
-            return {}
-        return json.loads(value)
-    
+        if isinstance(value, str):
+            return json.loads(value)
+        return value
+
     def _deserialize(self, value, attr, data, **kwargs):
-        return json.dumps(value)
-        
+        if isinstance(value, str):
+            return json.loads(value)
+        return value
 class ActionSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Action
@@ -29,11 +30,10 @@ class CameraSchema(SQLAlchemyAutoSchema):
 
 class ScheduleField(Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        if value is None or value == '':
-            return {}
-        schedule = json.loads(value)
+        if not value:
+            value = {}
         try:
-            week_schedule = WeekSchedule(schedule)
+            week_schedule = WeekSchedule(value)
             return week_schedule.to_dict()
         except InvalidScheduleException:
             return {}
@@ -54,7 +54,6 @@ class EntrySchema(SQLAlchemyAutoSchema):
         model = Entry
 
     videos = Nested(VideoSchema, many=True)
-    person_meta = JSONField()
 
 class EventSchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -72,7 +71,7 @@ class CountPerLocationSchema(Schema):
 
 class EntryWebhookInputDataSchema(Schema):
     location_id = Integer(required=True)
-    person_id = String(required=True)
+    member_id = String(required=True)
     entered_at = DateTime()
     person_meta = JSONField()
 

@@ -2,8 +2,6 @@ from uuid import uuid4
 from enum import Enum
 
 from flask_sqlalchemy import SQLAlchemy
-from flask_sqlalchemy.pagination import Pagination
-import sqlalchemy as sa
 from sqlalchemy import MetaData
 
 from utils.status_codes import EntryStatusCode, VideoStatusCode
@@ -32,7 +30,8 @@ class User(db.Model):
     api_key = db.Column(db.String(1024))
     api_key_expiry_date = db.Column(db.DateTime)
     is_admin = db.Column(db.Boolean, default=False)
-    video_retention_period = db.Column(db.Integer, default=30)
+    video_retention_days = db.Column(db.Integer, default=30)
+    stream_retention_hours = db.Column(db.Integer, default=24)
     timezone = db.Column(db.String(40), default='Pacific/Auckland')
     
 class Location(db.Model):
@@ -41,7 +40,8 @@ class Location(db.Model):
     name = db.Column(db.String(36), nullable=False)
     upload_method = db.Column(db.Enum(UploadOptionEnum), default=UploadOptionEnum.UserUpload, nullable=False)
     custom_upload_method = db.Column(db.String(256))
-    operational_hours = db.Column(db.String(256))
+    operational_hours = db.Column(db.JSON)
+    video_retention_days = db.Column(db.Integer, default=30)
     stream_retention_hours = db.Column(db.Integer, default=24)
 
     cameras = db.relationship("Camera", back_populates="location", innerjoin=True)
@@ -64,6 +64,8 @@ class Camera(db.Model):
     y4 = db.Column(db.Float)
     nx = db.Column(db.Float)
     ny = db.Column(db.Float)
+    stream_url = db.Column(db.String(256), nullable=False)
+    offset_amount = db.Column(db.Integer, default=0)
 
     location = db.relationship("Location", back_populates="cameras", innerjoin=True)
     
@@ -83,6 +85,7 @@ class Event(db.Model):
     deleted_at = db.Column(db.DateTime)
     is_merged = db.Column(db.Boolean, default=False)
     action_id = db.Column(db.Integer, db.ForeignKey(Action.id), index=True)
+    is_saved = db.Column(db.Boolean, default=False)
 
     entries = db.relationship("Entry", back_populates="event", innerjoin=True, lazy="joined")
     location = db.relationship("Location", innerjoin=True, lazy="joined")
@@ -95,8 +98,8 @@ class Event(db.Model):
 class Entry(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)
     event_id = db.Column(db.String(36), db.ForeignKey(Event.id), index=True, nullable=False)
-    person_id = db.Column(db.String(36), index=True)
-    person_meta = db.Column(db.String(1024), default="{}")
+    member_id = db.Column(db.String(36), index=True)
+    member_meta = db.Column(db.JSON)
     entered_at = db.Column(db.DateTime)
     status = db.Column(db.Enum(EntryStatusCode, values_callable=lambda c: [e.value for e in c]),
                        default=EntryStatusCode.CREATED, index=True, nullable=False)
@@ -118,10 +121,3 @@ class Video(db.Model):
     def set_status(self, new_status):
         self.status = new_status
         db.session.commit()
-
-
-class RTSPInfo(db.Model):
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    camera_id = db.Column(db.Integer, db.ForeignKey(Camera.id), nullable=False, index=True)
-    stream_url = db.Column(db.String(256), nullable=False)
-    offset_amount = db.Column(db.Integer, default=0)

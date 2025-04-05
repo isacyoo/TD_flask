@@ -62,9 +62,11 @@ def error_handler(web=True, api=True, admin=False):
                 return fn(*args, **kwargs)
             
             except BadRequest as e:
+                db.session.rollback()
                 return jsonify({"msg": "Malformed request"}), 400
             
             except Exception as e:
+                db.session.rollback()
                 app.logger.warning(f'User id: {current_user.id} || location: {fn}\n{traceback.format_exc()}')
                 return jsonify({"msg": "Method unsuccessful"}), 400
             

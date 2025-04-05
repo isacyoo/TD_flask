@@ -7,7 +7,7 @@ from flask import current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select
 
-from databases import db, Video, RTSPInfo, Location, Entry, Event
+from databases import db, Video, Location, Entry, Event
 from databases.schemas import EntryWebhookResponseSchema
 from utils.auth import error_handler
 from utils.upload import *
@@ -50,14 +50,14 @@ def entry_webhook() -> Response:
     
     duplicates = db.session.execute(
         select(Entry).where(
-            Entry.person_id==data['person_id'],
+            Entry.member_id==data['member_id'],
             Entry.entered_at<=current_time,
             Entry.entered_at>=current_time-timedelta(seconds=DUPLICATE_THRESHOLD)
         )
     ).first()
     
     if duplicates:
-        app.logger.info(f"Duplicate entry detected in {location.name} for {data['person_id']}")
+        app.logger.info(f"Duplicate entry detected in {location.name} for {data['member_id']}")
         return jsonify({"msg": "Duplicate entry attempts"}), 201
 
     event = Event(
@@ -68,7 +68,7 @@ def entry_webhook() -> Response:
     entry = Entry(
         id=str(uuid4()),
         event_id=event.id,
-        person_id=data["person_id"],
+        member_id=data["member_id"],
         person_meta=json.dumps(data.get("person_meta", {})),
         entered_at=current_time
     )
@@ -101,13 +101,10 @@ def entry_webhook() -> Response:
         return jsonify(response), 201
         
     elif location.upload_method.value == "RTSP":
-        rtsp_info = db.session.execute(
-            select(RTSPInfo).where(RTSPInfo.camera_id.in_([camera.id for camera in location.cameras]))).scalars().all()
-        
-        streams = [info.camera_id for info in rtsp_info]
-        start_timestamps = [current_time + timedelta(seconds=info.offset_amount) for info in rtsp_info]
+        streams = [camera.stream_url for camera in location.cameras]
+        start_timestamps = [current_time + timedelta(seconds=camera.offset_amount) for camera in location.cameras]
         end_timestamps = [start_time + timedelta(seconds=VIDEO_LENGTH) for start_time in start_timestamps]
-
+        
         app.logger.debug(f"RTSP upload started for {entry.id}")
 
         rtsp_upload(videos, streams, start_timestamps, end_timestamps)
@@ -121,7 +118,7 @@ def entry_webhook() -> Response:
 
         return jsonify(response), 201
     
-    elif location.upload_method == "Custom":
+    elif location.upload_method.value == "Custom":
         pass
     
     else:

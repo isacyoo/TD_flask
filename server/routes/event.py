@@ -6,6 +6,7 @@ from werkzeug.exceptions import NotFound
 
 from utils.auth import error_handler
 from utils.metrics import timeit
+from utils.event import get_event
 from databases import db, Location, query_events, get_page_info, Event, parse_time_range, query_adjacent_events, Entry
 from databases.schemas import EventSchema
 
@@ -13,13 +14,13 @@ event = Blueprint("event", "__name__")
 PER_PAGE = 1
 
 
-@event.get("/all_unreviewed_events/<location_id>")
+@event.get("/unreviewed_events/<location_id>")
 @error_handler()
 def get_all_unreviewed_events(location_id) -> Response:
-    person_id = request.args.get("personId", None)
+    member_id = request.args.get("memberId", None)
     time_range = parse_time_range(request.args.get('time', None))
 
-    query = query_events(location_id, person_id, time_range, None)
+    query = query_events(location_id, member_id, time_range, None)
         
     events = db.session.execute(query).unique().scalars()
     events = EventSchema(many=True).dump(events)
@@ -30,10 +31,10 @@ def get_all_unreviewed_events(location_id) -> Response:
 @timeit
 @error_handler()
 def get_unreviewed_events(location_id, page) -> Response:
-    person_id = request.args.get("personId", None)
+    member_id = request.args.get("memberId", None)
     time_range = parse_time_range(request.args.get('time', None))
 
-    query = query_events(location_id, person_id, time_range, None).group_by(Event.id)
+    query = query_events(location_id, member_id, time_range, None).group_by(Event.id)
     
     try:
         unreviewed_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
@@ -46,14 +47,14 @@ def get_unreviewed_events(location_id, page) -> Response:
 
     return jsonify(res)
 
-@event.get("/all_history_events/<location_id>")
+@event.get("/history_events/<location_id>")
 @error_handler()
 def get_all_history_events(location_id) -> Response:
     action_ids = request.args.getlist("actionId", None)
-    person_id = request.args.get("personId", None)
+    member_id = request.args.get("memberId", None)
     time_range = parse_time_range(request.args.get('time', None))
 
-    query = query_events(location_id, person_id, time_range, action_ids, True)
+    query = query_events(location_id, member_id, time_range, action_ids, True)
     
     events = db.session.execute(query).unique().scalars()
     events = EventSchema(many=True).dump(events)
@@ -65,10 +66,10 @@ def get_all_history_events(location_id) -> Response:
 @error_handler()
 def get_history_events(location_id, page) -> Response:
     action_ids = request.args.getlist("actionId", None)
-    person_id = request.args.get("personId", None)
+    member_id = request.args.get("memberId", None)
     time_range = parse_time_range(request.args.get('time', None))
 
-    query = query_events(location_id, person_id, time_range, action_ids, True).group_by(Event.id)
+    query = query_events(location_id, member_id, time_range, action_ids, True).group_by(Event.id)
 
     try:
         history_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
@@ -86,12 +87,9 @@ def get_history_events(location_id, page) -> Response:
 @error_handler(api=False)
 def get_adjacent_events(id):
     action_id = request.args.get("actionId", None)
-    person_id = request.args.get("personId", None)
+    member_id = request.args.get("memberId", None)
 
-    current_event = db.session.execute(
-        select(Event).join(Location).where(
-            Event.id==id,
-            Location.user_id==current_user.id)).unique().scalars().one_or_none()
+    current_event = get_event(id, current_user.id)
 
     if not current_event:
         app.logger.info(f'Adjacent events could not be found as the events does not exist: {current_user.id} - {id}')
@@ -101,7 +99,7 @@ def get_adjacent_events(id):
         app.logger.info(f'Adjacent events could not be found as the event is deleted: {current_user.id} - {id}')
         return jsonify({"msg": "Event is deleted"}), 400
         
-    next_event_query, previous_event_query = query_adjacent_events(current_event, person_id, action_id)
+    next_event_query, previous_event_query = query_adjacent_events(current_event, member_id, action_id)
     
     next_event = db.session.execute(next_event_query).unique().scalars().first()
     previous_event = db.session.execute(previous_event_query).unique().scalars().first()
@@ -118,15 +116,72 @@ def get_adjacent_events(id):
 
 @event.get("/event/<id>")
 @error_handler()
-def get_event(id) -> Response:
-    event = db.session.execute(
-        select(Event).join(Location).where(
-            Event.id==id,
-            Location.user_id==current_user.id)).unique().scalars().one_or_none()
+def get_event_with_id(id) -> Response:
+    event = get_event(id, current_user.id)
     
     if not event:
         return jsonify({"msg": "Event not found"}), 404
 
+    event = EventSchema().dump(event)
+    
+    return jsonify(event)
+
+
+@event.get("/saved_events/<location_id>")
+@error_handler()
+def get_all_saved_events(location_id) -> Response:
+    member_id = request.args.get("memberId", None)
+    time_range = parse_time_range(request.args.get('time', None))
+
+    query = query_events(location_id, member_id, time_range, None, saved=True)
+    events = db.session.execute(query).unique().scalars()
+    events = EventSchema(many=True).dump(events)
+    
+    return jsonify(events)
+
+@event.get("/saved_events/<location_id>/<int:page>")
+@error_handler()
+def get_saved_events(location_id, page) -> Response:
+    member_id = request.args.get("memberId", None)
+    time_range = parse_time_range(request.args.get('time', None))
+
+    query = query_events(location_id, member_id, time_range, None, saved=True).group_by(Event.id)
+
+    try:
+        saved_paginate = db.paginate(query, page=page, per_page=PER_PAGE)
+    except NotFound:
+        return jsonify({"msg": "No events found"}), 404
+    
+    events = EventSchema(many=True).dump(saved_paginate.items)
+    page_info = get_page_info(saved_paginate)
+    res = {"events": events} | page_info
+
+    return jsonify(res)
+
+@event.post("/event/save/<id>")
+@error_handler()
+def save_event(id) -> Response:
+    event = get_event(id, current_user.id)
+
+    if not event:
+        return jsonify({"msg": "Event not found"}), 404
+
+    event.is_saved = True
+    db.session.commit()
+    event = EventSchema().dump(event)
+    
+    return jsonify(event)
+
+@event.post("/event/unsave/<id>")
+@error_handler()
+def unsave_event(id) -> Response:
+    event = get_event(id, current_user.id)
+
+    if not event:
+        return jsonify({"msg": "Event not found"}), 404
+
+    event.is_saved = False
+    db.session.commit()
     event = EventSchema().dump(event)
     
     return jsonify(event)

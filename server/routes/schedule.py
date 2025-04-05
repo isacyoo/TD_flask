@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select
 
-from databases import db, Location, RTSPInfo, Camera
+from databases import db, Location, Camera
 from clients import sqs_client
 from utils.auth import error_handler
 from utils.hours import WeekSchedule, InvalidScheduleException
@@ -77,17 +77,18 @@ def modify_location_schedule(location_id):
     
     location.operational_hours = json.dumps(new_schedule)
     db.session.commit()
+
+    if location.upload_method.value != 'RTSP':
+        return jsonify({"msg": "Schedule updated"}), 201
     
     data_retention = location.stream_retention_hours
     timezone = current_user.timezone
-    rtsp_details = db.session.execute(
-        select(RTSPInfo).join(Camera).where(Camera.location_id==location_id)).scalars().all()
 
     rtsp_details = [{
-        'camera_id': rtsp.camera_id,
-        'stream_url': rtsp.stream_url,
+        'camera_id': camera.id,
+        'stream_url': camera.stream_url,
         'data_retention': data_retention
-    } for rtsp in rtsp_details]
+    } for camera in location.cameras]
 
     location_info = {
         'location_id': location_id,
