@@ -2,11 +2,11 @@ import json
 
 from marshmallow import Schema, validates, ValidationError
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow.fields import Nested, Field, Integer, String, DateTime, Url
+from marshmallow.fields import Nested, Field, Integer, String, DateTime, Url, Boolean
 from sqlalchemy import select
 from flask_jwt_extended import current_user
 
-from .models import Action, Camera, Location, Video, Entry, Event, db
+from .models import Action, Camera, Location, Video, Entry, Event, db, HighRiskMember, User
 from utils.hours import WeekSchedule, InvalidScheduleException
 
 class JSONField(Field):
@@ -103,3 +103,21 @@ class LocationStatsSchema(Schema):
 class StatsSchema(Schema):
     total_unreviewed = Integer()
     location_stats = Nested(LocationStatsSchema, many=True)
+
+
+class HighRiskMemberSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = HighRiskMember
+
+
+class UserSettingSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
+        fields = ("id", "name", "timezone", "is_admin", "api_key_expiry_date",
+                  "video_retention_days", "stream_retention_hours", "review_high_risk_members")
+        
+
+class UpdateUserSettingInputSchema(Schema):
+    video_retention_days = Integer()
+    stream_retention_hours = Integer()
+    review_high_risk_members = Boolean()

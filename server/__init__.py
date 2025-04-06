@@ -42,6 +42,7 @@ def register_blueprint(app):
         app.register_blueprint(schedule)
         app.register_blueprint(event)
         app.register_blueprint(entry)
+        app.register_blueprint(high_risk_member)
         db.create_all()
         
 

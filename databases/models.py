@@ -33,6 +33,7 @@ class User(db.Model):
     video_retention_days = db.Column(db.Integer, default=30)
     stream_retention_hours = db.Column(db.Integer, default=24)
     timezone = db.Column(db.String(40), default='Pacific/Auckland')
+    review_high_risk_members = db.Column(db.Boolean, default=False)
     
 class Location(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
@@ -43,6 +44,7 @@ class Location(db.Model):
     operational_hours = db.Column(db.JSON)
     video_retention_days = db.Column(db.Integer, default=30)
     stream_retention_hours = db.Column(db.Integer, default=24)
+    review_high_risk_members = db.Column(db.Boolean, default=False)
 
     cameras = db.relationship("Camera", back_populates="location", innerjoin=True)
 
@@ -76,6 +78,15 @@ class Action(db.Model):
     is_tailgating = db.Column(db.Boolean)
     is_enabled = db.Column(db.Boolean, default=True)
     is_deleted = db.Column(db.Boolean, default=False)
+
+
+class HighRiskMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False)
+    member_id = db.Column(db.String(36), nullable=False)
+    is_deleted = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, nullable=False)
+
 
 class Event(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid4()), nullable=False, unique=True)

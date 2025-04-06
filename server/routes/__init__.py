@@ -6,3 +6,4 @@ from .video import video
 from .schedule import schedule
 from .event import event
 from .entry import entry
+from .high_risk_member import high_risk_member
