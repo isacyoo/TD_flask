@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 from databases import db, Action, Event
 from databases.schemas import ActionSchema
 from utils.auth import error_handler
+from utils.action import check_action_exists
 
 action = Blueprint("action", "__name__")
 
@@ -26,6 +27,13 @@ def get_actions() -> Response:
 @error_handler()
 def create_action() -> Response:
     data = request.json
+
+    if check_action_exists(data["name"]):
+        app.logger.info(f'Action name {data["name"]} already exists | user id: {current_user.id}')
+        return jsonify({"msg": "Action name already exists"}), 400
+    
+    data["user_id"] = current_user.id
+    
     db.session.add(Action(**data))
     db.session.commit()
     return jsonify({"msg": "Add action successful"}), 201
@@ -90,10 +98,17 @@ def delete_action(action_id):
 def update_action():
     data = request.json
     for action in data["actions"]:
-        query = update(Action).where(
-            Action.user_id == current_user.id,
-            Action.id == action["id"]).values(**action)
-        db.session.execute(query)
+        if action.get("id") is None:
+            if "id" in action:
+                del action["id"]
+            action["user_id"] = current_user.id
+            action = Action(**action)
+            db.session.add(action)
+        else:
+            query = update(Action).where(
+                Action.user_id == current_user.id,
+                Action.id == action["id"]).values(**action)
+            db.session.execute(query)
     db.session.commit()
 
     return jsonify({"msg": "Update action successful"}), 201

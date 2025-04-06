@@ -11,7 +11,7 @@ from databases import db, Location, query_events, get_page_info, Event, parse_ti
 from databases.schemas import EventSchema
 
 event = Blueprint("event", "__name__")
-PER_PAGE = 1
+PER_PAGE = 10
 
 
 @event.get("/unreviewed_events/<location_id>")
@@ -157,6 +157,23 @@ def get_saved_events(location_id, page) -> Response:
     res = {"events": events} | page_info
 
     return jsonify(res)
+
+@event.put("/event_save_status/<id>")
+@error_handler()
+def update_event_save_status(id):
+    save = request.json.get("save")
+    event = get_event(id, current_user.id)
+    if not event:
+        return jsonify({"msg": "Event not found"}), 404
+    
+    if save is None:
+        return jsonify({"msg": "Save status not provided"}), 400
+    
+    event.is_saved = save
+    db.session.commit()
+    event = EventSchema().dump(event)
+    
+    return jsonify(event)
 
 @event.post("/event/save/<id>")
 @error_handler()

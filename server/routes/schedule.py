@@ -75,7 +75,7 @@ def modify_location_schedule(location_id):
         app.logger.info(f'Invalid schedule with {current_user.id}')
         return jsonify({"msg": "Invalid schedule"}), 400
     
-    location.operational_hours = json.dumps(new_schedule)
+    location.operational_hours = new_schedule
     db.session.commit()
 
     if location.upload_method.value != 'RTSP':
