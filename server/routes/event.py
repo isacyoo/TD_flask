@@ -174,31 +174,3 @@ def update_event_save_status(id):
     event = EventSchema().dump(event)
     
     return jsonify(event)
-
-@event.post("/event/save/<id>")
-@error_handler()
-def save_event(id) -> Response:
-    event = get_event(id, current_user.id)
-
-    if not event:
-        return jsonify({"msg": "Event not found"}), 404
-
-    event.is_saved = True
-    db.session.commit()
-    event = EventSchema().dump(event)
-    
-    return jsonify(event)
-
-@event.post("/event/unsave/<id>")
-@error_handler()
-def unsave_event(id) -> Response:
-    event = get_event(id, current_user.id)
-
-    if not event:
-        return jsonify({"msg": "Event not found"}), 404
-
-    event.is_saved = False
-    db.session.commit()
-    event = EventSchema().dump(event)
-    
-    return jsonify(event)

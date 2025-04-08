@@ -46,8 +46,7 @@ def delete_high_risk_member(member_id) -> Response:
     high_risk_member = db.session.execute(
         select(HighRiskMember).where(
             HighRiskMember.user_id==current_user.id,
-            HighRiskMember.member_id==member_id,
-            HighRiskMember.is_deleted==False)).scalars().one_or_none()
+            HighRiskMember.member_id==member_id)).scalars().one_or_none()
     
     if not high_risk_member:
         app.logger.info(f'High risk member id {member_id} not found | user id: {current_user.id}')
@@ -62,7 +61,7 @@ def delete_high_risk_member(member_id) -> Response:
 
     return jsonify({"msg": "High risk member deleted successfully"}), 200
 
-@high_risk_member.post("/update_high_risk_members")
+@high_risk_member.put("/high_risk_members")
 @error_handler()
 def update_high_risk_members() -> Response:
     data = request.json

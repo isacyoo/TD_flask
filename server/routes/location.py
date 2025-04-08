@@ -7,7 +7,7 @@ from utils.auth import error_handler
 from utils.stats import grab_location_id, get_total_unreviewed_events_per_location, get_total_entries_per_location,\
     get_total_number_in_process_per_location, merge_stats
 from databases import Location, db
-from databases.schemas import LocationSchema, StatsSchema
+from databases.schemas import LocationSchema, StatsSchema, UpdateLocationSettingInputSchema
 
 location = Blueprint("location", "__name__")
 
@@ -62,3 +62,23 @@ def get_current_stats():
                                          "location_stats": all_stats})
     
     return jsonify(stats)
+
+@location.put("/location_settings/<location_id>")
+@error_handler()
+def update_location_settings(location_id) -> Response:
+    data = UpdateLocationSettingInputSchema().load(request.json)
+    location = db.session.execute(
+        select(Location).where(
+            Location.id == location_id,
+            Location.user_id == current_user.id)).scalars().one_or_none()
+    
+    if not location:
+        app.logger.info(f'Location id {location_id} not found | user id: {current_user.id}')
+        return jsonify({"msg": f"Location {location_id} for user {current_user.id} not found"}), 404
+    
+    for key, value in data.items():
+        setattr(location, key, value)
+    
+    db.session.commit()
+    
+    return jsonify({"msg": "Successfully updated location settings"}), 201

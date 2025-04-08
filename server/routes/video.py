@@ -39,7 +39,7 @@ def generate_video_url(id):
         app.logger.info(f'Send file failed with {video.id}: {e}')
         return jsonify({"msg": 'Video stream failed'}), 400
 
-@video.post("/set_video_status/<id>")
+@video.put("/video_status/<id>")
 @error_handler(admin=True)
 def set_video_status(id):
     all_statuses = [status.name for status in VideoStatusCode]
@@ -100,7 +100,7 @@ def confirm_upload(id):
 
     return jsonify({"msg": "Upload success"}), 201
 
-@video.get("/check_video_exists/<id>")
+@video.get("/video_existence/<id>")
 @error_handler(admin=True)
 def check_video_exist(id):
     video = db.session.execute(

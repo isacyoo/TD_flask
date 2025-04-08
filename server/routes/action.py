@@ -68,7 +68,7 @@ def apply_action_to_event(event_id, action_id):
         app.logger.info(f'Action id {action_id} not found | user id: {current_user.id}')
         return jsonify({"msg": f"Action id {action_id} not found"}), 404
 
-@action.post("/delete_action/<action_id>")
+@action.delete("/action/<action_id>")
 @error_handler()
 def delete_action(action_id):
     action = db.session.execute(
@@ -93,7 +93,7 @@ def delete_action(action_id):
     db.session.commit()
     return jsonify({"msg": f"Action {action_id} deleted"}), 201
 
-@action.post("/update_actions")
+@action.put("/actions")
 @error_handler()
 def update_action():
     data = request.json

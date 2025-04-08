@@ -31,7 +31,7 @@ def get_user_settings() -> Response:
     
     return jsonify(UserSettingSchema().dump(user)), 200
 
-@users.post("/user_settings")
+@users.put("/user_settings")
 @error_handler()
 def update_user_settings() -> Response:
     user_id = current_user.id
