@@ -16,10 +16,11 @@ def query_events(location_id, member_id, time_range, action_ids, history=False, 
         Event.location_id==location_id
     )
 
-    if history:
-        query = query.where(Event.action_id.is_not(None))
-    else:
-        query = query.where(Event.action_id.is_(None))
+    if not saved:
+        if history:
+            query = query.where(Event.action_id.is_not(None))
+        else:
+            query = query.where(Event.action_id.is_(None))
 
     if member_id:
         query = query.where(Entry.member_id==member_id)

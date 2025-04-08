@@ -18,4 +18,4 @@ else
 fi
 
 echo "Starting gunicorn"
-gunicorn -b :5000 --pythonpath /var/www app:app --workers `nproc` --threads 2 --config=gunicorn_config.py
+gunicorn -b :5000 --pythonpath /var/www app:app --workers `nproc` --threads 1 --config=gunicorn_config.py
