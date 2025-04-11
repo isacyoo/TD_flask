@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from flask_jwt_extended import current_user
-from sqlalchemy.orm import lazyload
 
 from .models import *
 

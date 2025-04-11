@@ -1,5 +1,3 @@
-import datetime
-
 from flask_jwt_extended import current_user
 from sqlalchemy import select
 

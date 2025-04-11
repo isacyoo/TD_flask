@@ -1,12 +1,11 @@
 from flask import Blueprint, Response, jsonify, request
 from flask import current_app as app
 from flask_jwt_extended import current_user
-from sqlalchemy import select
 
 from utils.auth import error_handler
 from utils.stats import get_total_unreviewed_events_per_location, get_total_entries_per_location,\
     get_total_number_in_process_per_location, merge_stats
-from databases import Location, db
+from databases import db
 from databases.schemas import LocationSchema, StatsSchema, UpdateLocationSettingInputSchema
 from utils.location import retrieve_location_id, retrieve_location, retrieve_locations
 

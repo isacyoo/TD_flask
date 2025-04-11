@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select
 
-from databases import db, Location, Camera
+from databases import db, Location
 from databases.schemas import LocationSchema
 from clients import sqs_client
 from utils.auth import error_handler

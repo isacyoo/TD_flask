@@ -1,13 +1,12 @@
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
-from sqlalchemy import select, func
 from werkzeug.exceptions import NotFound
 
 from utils.auth import error_handler
 from utils.metrics import timeit
 from utils.event import retrieve_event
-from databases import db, Location, query_events, get_page_info, Event, parse_time_range, query_adjacent_events, Entry
+from databases import db, query_events, get_page_info, Event, parse_time_range, query_adjacent_events
 from databases.schemas import EventSchema, EventWithPageInfoSchema
 
 event = Blueprint("event", "__name__")

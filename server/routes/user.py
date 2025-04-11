@@ -1,4 +1,4 @@
-from flask import Blueprint, request, Response, jsonify, session
+from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from sqlalchemy import select
 from flask_jwt_extended import current_user
