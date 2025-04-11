@@ -125,7 +125,7 @@ def entry_webhook() -> Response:
         return jsonify({"msg": f"Invalid upload method for location {location.name}"}), 400
         
 
-@entry.post("/set_entry_status/<id>")
+@entry.post("/set-entry-status/<id>")
 @error_handler(admin=True)
 def set_entry_status(id):
     all_statuses = [status.name for status in VideoStatusCode]

@@ -20,7 +20,6 @@ video = Blueprint("video", "__name__")
 @fail_counter
 @error_handler()
 def generate_video_url(id):
-    
     video = db.session.execute(
         select(Video).join(Camera).join(Location).where(
             Location.user_id==current_user.id, 
@@ -39,7 +38,7 @@ def generate_video_url(id):
         app.logger.info(f'Send file failed with {video.id}: {e}')
         return jsonify({"msg": 'Video stream failed'}), 400
 
-@video.put("/video_status/<id>")
+@video.put("/video-status/<id>")
 @error_handler(admin=True)
 def set_video_status(id):
     all_statuses = [status.name for status in VideoStatusCode]
@@ -71,7 +70,7 @@ def set_video_status(id):
         "new_status": status.name
     }), 201
 
-@video.post('/confirm_upload/<id>')
+@video.post('/confirm-upload/<id>')
 @error_handler(admin=True)
 def confirm_upload(id):
     video = get_video(id)
@@ -100,7 +99,7 @@ def confirm_upload(id):
 
     return jsonify({"msg": "Upload success"}), 201
 
-@video.get("/video_existence/<id>")
+@video.get("/video-existence/<id>")
 @error_handler(admin=True)
 def check_video_exist(id):
     video = db.session.execute(

@@ -12,7 +12,7 @@ from utils.member import check_high_risk_member_exists, retrieve_high_risk_membe
 
 high_risk_member = Blueprint("high_risk_member", "__name__")
 
-@high_risk_member.get("/high_risk_members")
+@high_risk_member.get("/high-risk-members")
 @error_handler()
 def get_high_risk_members() -> Response:
     high_risk_members = retrieve_high_risk_members()
@@ -21,7 +21,7 @@ def get_high_risk_members() -> Response:
     return jsonify(schema.dump(high_risk_members)), 200
 
 
-@high_risk_member.post("/high_risk_member/<member_id>")
+@high_risk_member.post("/high-risk-member/<member_id>")
 @error_handler()
 def create_high_risk_member(member_id) -> Response:
     if check_high_risk_member_exists(member_id):
@@ -44,7 +44,7 @@ def create_high_risk_member(member_id) -> Response:
     res = HighRiskMemberSchema().dump(high_risk_member)
     return jsonify(res), 201
 
-@high_risk_member.delete("/high_risk_member/<member_id>")
+@high_risk_member.delete("/high-risk-member/<member_id>")
 @error_handler()
 def delete_high_risk_member(member_id) -> Response:
     high_risk_member = retrieve_high_risk_member(member_id)
@@ -62,7 +62,7 @@ def delete_high_risk_member(member_id) -> Response:
 
     return jsonify({"msg": "High risk member deleted successfully"}), 200
 
-@high_risk_member.put("/high_risk_members")
+@high_risk_member.put("/high-risk-members")
 @error_handler()
 def update_high_risk_members() -> Response:
     data = request.json
@@ -84,7 +84,7 @@ def update_high_risk_members() -> Response:
 
     return get_high_risk_members()
 
-@high_risk_member.get("/high_risk_member/<member_id>")
+@high_risk_member.get("/high-risk-member/<member_id>")
 @error_handler()
 def get_high_risk_member(member_id) -> Response:
     high_risk_member = retrieve_high_risk_member(member_id)

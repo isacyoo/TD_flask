@@ -17,7 +17,7 @@ def create_user() -> Response:
     db.session.commit()
     return jsonify({"msg": f"Successfully created user {data['id']}"}), 201
 
-@users.get("/user_settings")
+@users.get("/user-settings")
 @error_handler()
 def get_user_settings() -> Response:
     user_id = current_user.id
@@ -31,7 +31,7 @@ def get_user_settings() -> Response:
     
     return jsonify(UserSettingSchema().dump(user)), 200
 
-@users.put("/user_settings")
+@users.put("/user-settings")
 @error_handler()
 def update_user_settings() -> Response:
     user_id = current_user.id

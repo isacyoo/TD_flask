@@ -36,7 +36,7 @@ def get_location_schedule(location_id):
 
     return jsonify(schedule.to_dict()), 200
 
-@schedule.post('/validate_schedule')
+@schedule.post('/validate-schedule')
 @error_handler()
 def validate_schedule():
     schedule = request.json

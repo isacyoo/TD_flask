@@ -31,7 +31,7 @@ def get_location(location_id) -> Response:
 
     return jsonify(LocationSchema().dump(location)), 200
     
-@location.get("/location_id/<name>")
+@location.get("/location-id/<name>")
 @error_handler()
 def get_location_id(name) -> Response:
     location_id = retrieve_location_id(current_user.id, name)
@@ -42,7 +42,7 @@ def get_location_id(name) -> Response:
 
     return jsonify({"location_id": location_id}), 200
 
-@location.get("/current_stats")
+@location.get("/current-stats")
 @error_handler()
 def get_current_stats():
     hours = int(request.args.get("hours", "24"))
@@ -61,7 +61,7 @@ def get_current_stats():
     
     return jsonify(stats)
 
-@location.put("/location_settings/<location_id>")
+@location.put("/location-settings/<location_id>")
 @error_handler()
 def update_location_settings(location_id) -> Response:
     data = UpdateLocationSettingInputSchema().load(request.json)

@@ -13,7 +13,7 @@ event = Blueprint("event", "__name__")
 PER_PAGE = 10
 
 
-@event.get("/unreviewed_events/<location_id>")
+@event.get("/unreviewed-events/<location_id>")
 @error_handler()
 def get_all_unreviewed_events(location_id) -> Response:
     member_id = request.args.get("memberId", None)
@@ -26,7 +26,7 @@ def get_all_unreviewed_events(location_id) -> Response:
 
     return jsonify(events)
 
-@event.get("/unreviewed_events/<location_id>/<int:page>")
+@event.get("/unreviewed-events/<location_id>/<int:page>")
 @timeit
 @error_handler()
 def get_unreviewed_events(location_id, page) -> Response:
@@ -47,7 +47,7 @@ def get_unreviewed_events(location_id, page) -> Response:
     res = EventWithPageInfoSchema().dump(res)
     return jsonify(res)
 
-@event.get("/history_events/<location_id>")
+@event.get("/history-events/<location_id>")
 @error_handler()
 def get_all_history_events(location_id) -> Response:
     action_ids = request.args.getlist("actionId", None)
@@ -61,7 +61,7 @@ def get_all_history_events(location_id) -> Response:
     
     return jsonify(events)
 
-@event.get("/history_events/<location_id>/<int:page>")
+@event.get("/history-events/<location_id>/<int:page>")
 @timeit
 @error_handler()
 def get_history_events(location_id, page) -> Response:
@@ -84,7 +84,7 @@ def get_history_events(location_id, page) -> Response:
     return jsonify(res)
         
     
-@event.get("/adjacent_events/<id>")
+@event.get("/adjacent-events/<id>")
 @error_handler(api=False)
 def get_adjacent_events(id):
     action_id = request.args.get("actionId", None)
@@ -128,7 +128,7 @@ def get_event_with_id(id) -> Response:
     return jsonify(event)
 
 
-@event.get("/saved_events/<location_id>")
+@event.get("/saved-events/<location_id>")
 @error_handler()
 def get_all_saved_events(location_id) -> Response:
     member_id = request.args.get("memberId", None)
@@ -140,7 +140,7 @@ def get_all_saved_events(location_id) -> Response:
     
     return jsonify(events)
 
-@event.get("/saved_events/<location_id>/<int:page>")
+@event.get("/saved-events/<location_id>/<int:page>")
 @error_handler()
 def get_saved_events(location_id, page) -> Response:
     member_id = request.args.get("memberId", None)
@@ -160,7 +160,7 @@ def get_saved_events(location_id, page) -> Response:
     
     return jsonify(res)
 
-@event.put("/event_save_status/<id>")
+@event.put("/event-save-status/<id>")
 @error_handler()
 def update_event_save_status(id):
     save = request.json.get("save")

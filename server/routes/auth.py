@@ -61,7 +61,7 @@ def refresh() -> Response:
     return res, 201
     
 
-@auth.post('/reset_password')
+@auth.post('/reset-password')
 @error_handler(web=False)
 def reset_password() -> Response:
     id = request.json.get("id","")
@@ -80,12 +80,12 @@ def reset_password() -> Response:
     
     return jsonify({"msg": "Password reset successful"}), 201
 
-@auth.get("/user_info") 
+@auth.get("/user-info") 
 @error_handler()
 def get_user_info() -> Response:
     return jsonify({"id":current_user.id, "name":current_user.name, "role": 'ADMIN' if current_user.is_admin else 'USER'})
 
-@auth.post("/reset_api_key")
+@auth.post("/reset-api-key")
 @error_handler()
 def reset_api_key():
     token = create_access_token(identity=current_user.id, 
@@ -102,12 +102,7 @@ def reset_api_key():
     return jsonify({"msg": "API key reset successful. This API key will be valid for the next 52 weeks.", 
                     "api_key" : token, "expiry_date": expiry_date}), 201
 
-@auth.get('/api_key')
-@error_handler()
-def get_api_key():
-    return jsonify({"api_key" : current_user.api_key})
-
-@auth.get("/is_authenticated")
+@auth.get("/is-authenticated")
 @error_handler()
 def is_authenticated():
     return jsonify({"is_authenticated": True})

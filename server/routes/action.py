@@ -45,7 +45,7 @@ def create_action() -> Response:
     return jsonify(action), 201
 
     
-@action.post("/action_to_event/<event_id>/<action_id>")
+@action.post("/action-to-event/<event_id>/<action_id>")
 @error_handler()
 def apply_action_to_event(event_id, action_id):
     event = retrieve_event(event_id)
