@@ -4,18 +4,18 @@ from flask_jwt_extended import current_user
 from sqlalchemy import select
 
 from utils.auth import error_handler
-from utils.stats import grab_location_id, get_total_unreviewed_events_per_location, get_total_entries_per_location,\
+from utils.stats import get_total_unreviewed_events_per_location, get_total_entries_per_location,\
     get_total_number_in_process_per_location, merge_stats
 from databases import Location, db
 from databases.schemas import LocationSchema, StatsSchema, UpdateLocationSettingInputSchema
+from utils.location import retrieve_location_id, retrieve_location, retrieve_locations
 
 location = Blueprint("location", "__name__")
 
 @location.get("/locations")
 @error_handler()
 def get_locations() -> Response:
-    locations = db.session.execute(
-        select(Location).where(Location.user_id==current_user.id)).scalars().all()
+    locations = retrieve_locations()
     
     locations = LocationSchema(many=True).dump(locations)
 
@@ -24,8 +24,7 @@ def get_locations() -> Response:
 @location.get("/location/<location_id>")
 @error_handler()
 def get_location(location_id) -> Response:
-    location = db.session.execute(
-        select(Location).where(Location.id==location_id)).scalars().one_or_none()
+    location = retrieve_location(location_id)
 
     if not location:
         app.logger.info(f'Location id {location_id} not found | user id: {current_user.id}')
@@ -36,7 +35,7 @@ def get_location(location_id) -> Response:
 @location.get("/location_id/<name>")
 @error_handler()
 def get_location_id(name) -> Response:
-    location_id = grab_location_id(current_user.id, name)
+    location_id = retrieve_location_id(current_user.id, name)
 
     if not location_id:
         app.logger.info(f'Location id {name} not found | user id: {current_user.id}')
@@ -67,10 +66,7 @@ def get_current_stats():
 @error_handler()
 def update_location_settings(location_id) -> Response:
     data = UpdateLocationSettingInputSchema().load(request.json)
-    location = db.session.execute(
-        select(Location).where(
-            Location.id == location_id,
-            Location.user_id == current_user.id)).scalars().one_or_none()
+    location = retrieve_location(location_id)
     
     if not location:
         app.logger.info(f'Location id {location_id} not found | user id: {current_user.id}')
@@ -80,5 +76,7 @@ def update_location_settings(location_id) -> Response:
         setattr(location, key, value)
     
     db.session.commit()
+    app.logger.info(f'Location id {location_id} updated | user id: {current_user.id}')
     
-    return jsonify({"msg": "Successfully updated location settings"}), 201
+    res = LocationSchema().dump(location)
+    return jsonify(res), 200

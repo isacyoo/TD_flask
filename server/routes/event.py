@@ -6,9 +6,9 @@ from werkzeug.exceptions import NotFound
 
 from utils.auth import error_handler
 from utils.metrics import timeit
-from utils.event import get_event
+from utils.event import retrieve_event
 from databases import db, Location, query_events, get_page_info, Event, parse_time_range, query_adjacent_events, Entry
-from databases.schemas import EventSchema
+from databases.schemas import EventSchema, EventWithPageInfoSchema
 
 event = Blueprint("event", "__name__")
 PER_PAGE = 10
@@ -41,10 +41,11 @@ def get_unreviewed_events(location_id, page) -> Response:
     except NotFound:
         return jsonify({"msg": "No events found"}), 404
     
-    events = EventSchema(many=True).dump(unreviewed_paginate.items)
+    events = unreviewed_paginate.items
     page_info = get_page_info(unreviewed_paginate)
-    res = {"events": events} | page_info
+    res = {"events": events} | {"page_info": page_info}
 
+    res = EventWithPageInfoSchema().dump(res)
     return jsonify(res)
 
 @event.get("/history_events/<location_id>")
@@ -76,9 +77,10 @@ def get_history_events(location_id, page) -> Response:
     except NotFound:
         return jsonify({"msg": "No events found"}), 404
     
-    events = EventSchema(many=True).dump(history_paginate.items)
+    events = history_paginate.items
     page_info = get_page_info(history_paginate)
-    res = {"events": events} | page_info
+    res = {"events": events} | {"page_info": page_info}
+    res = EventWithPageInfoSchema().dump(res)
 
     return jsonify(res)
         
@@ -89,7 +91,7 @@ def get_adjacent_events(id):
     action_id = request.args.get("actionId", None)
     member_id = request.args.get("memberId", None)
 
-    current_event = get_event(id, current_user.id)
+    current_event = retrieve_event(id)
 
     if not current_event:
         app.logger.info(f'Adjacent events could not be found as the events does not exist: {current_user.id} - {id}')
@@ -117,7 +119,7 @@ def get_adjacent_events(id):
 @event.get("/event/<id>")
 @error_handler()
 def get_event_with_id(id) -> Response:
-    event = get_event(id, current_user.id)
+    event = retrieve_event(id)
     
     if not event:
         return jsonify({"msg": "Event not found"}), 404
@@ -152,17 +154,18 @@ def get_saved_events(location_id, page) -> Response:
     except NotFound:
         return jsonify({"msg": "No events found"}), 404
     
-    events = EventSchema(many=True).dump(saved_paginate.items)
+    events = saved_paginate.items
     page_info = get_page_info(saved_paginate)
-    res = {"events": events} | page_info
-
+    res = {"events": events} | {"page_info": page_info}
+    res = EventWithPageInfoSchema().dump(res)
+    
     return jsonify(res)
 
 @event.put("/event_save_status/<id>")
 @error_handler()
 def update_event_save_status(id):
     save = request.json.get("save")
-    event = get_event(id, current_user.id)
+    event = retrieve_event(id)
     if not event:
         return jsonify({"msg": "Event not found"}), 404
     

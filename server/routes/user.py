@@ -48,5 +48,7 @@ def update_user_settings() -> Response:
         setattr(user, key, value)
     
     db.session.commit()
-    
-    return jsonify({"msg": "Successfully updated user settings"}), 201
+    app.logger.info(f'User id {user_id} settings updated')
+
+    res = UserSettingSchema().dump(user)
+    return jsonify(res), 200

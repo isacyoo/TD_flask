@@ -2,7 +2,7 @@ import json
 
 from marshmallow import Schema, validates, ValidationError
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from marshmallow.fields import Nested, Field, Integer, String, DateTime, Url, Boolean
+from marshmallow.fields import Nested, Field, Integer, String, DateTime, Url, Boolean, List
 from sqlalchemy import select
 from flask_jwt_extended import current_user
 
@@ -64,6 +64,17 @@ class EventSchema(SQLAlchemyAutoSchema):
     location = Nested(LocationSchema, only=("id", "name"))
     action = Nested(ActionSchema)
     entered_at = DateTime(attribute="entered_at")
+
+class PageInfoSchema(Schema):
+    total = Integer()
+    page = Integer()
+    pages = Integer()
+    per_page = Integer()
+    iter_pages = List(Integer())
+
+class EventWithPageInfoSchema(Schema):
+    events = Nested(EventSchema, many=True)
+    page_info = Nested(PageInfoSchema)
 
 class CountPerLocationSchema(Schema):
     location = Nested(LocationSchema, only=("id", "name"))

@@ -6,23 +6,24 @@ from flask_jwt_extended import current_user
 from sqlalchemy import select
 
 from databases import db, Location, Camera
+from databases.schemas import LocationSchema
 from clients import sqs_client
 from utils.auth import error_handler
 from utils.hours import WeekSchedule, InvalidScheduleException
+from utils.location import retrieve_location
 
 schedule = Blueprint("schedule", "__name__")
 
 @schedule.get('/schedule/<location_id>')
 @error_handler()
 def get_location_schedule(location_id):
-    location = db.session.execute(
-        select(Location).where(Location.user_id==current_user.id, Location.id==location_id)).scalar_one_or_none()
-    
+    location = retrieve_location(location_id)
+
     if not location:
         app.logger.info(f'Location id {location_id} not found with {current_user.id}')
         return jsonify({"msg": "Location not found"}), 404
     
-    operational_hours = json.loads(location.operational_hours)
+    operational_hours = location.operational_hours
     try:
         schedule = WeekSchedule(operational_hours)
     except InvalidScheduleException:
@@ -107,4 +108,5 @@ def modify_location_schedule(location_id):
         MessageBody=json.dumps(message)
     )
 
-    return jsonify({"msg": "Schedule updated"}), 201
+    res = LocationSchema().dump(location)
+    return jsonify(res), 201

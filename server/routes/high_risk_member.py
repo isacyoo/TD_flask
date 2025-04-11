@@ -3,22 +3,19 @@ import datetime
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 
 from databases import db, HighRiskMember
 from databases.schemas import HighRiskMemberSchema
 from utils.auth import error_handler
-from utils.member import check_high_risk_member_exists
+from utils.member import check_high_risk_member_exists, retrieve_high_risk_member, retrieve_high_risk_members
 
 high_risk_member = Blueprint("high_risk_member", "__name__")
 
 @high_risk_member.get("/high_risk_members")
 @error_handler()
 def get_high_risk_members() -> Response:
-    high_risk_members = db.session.execute(
-        select(HighRiskMember).where(
-            HighRiskMember.user_id==current_user.id,
-            HighRiskMember.is_deleted==False)).scalars().all()
+    high_risk_members = retrieve_high_risk_members()
     
     schema = HighRiskMemberSchema(many=True)
     return jsonify(schema.dump(high_risk_members)), 200
@@ -37,16 +34,20 @@ def create_high_risk_member(member_id) -> Response:
         created_at=datetime.datetime.now(datetime.timezone.utc)
     ))
     db.session.commit()
+
+    app.logger.info(f'High risk member id {member_id} created | user id: {current_user.id}')
+
+    res = db.session.execute(select(func.LAST_INSERT_ID()))
+    high_risk_member_id = res.scalar()
+    high_risk_member = retrieve_high_risk_member(high_risk_member_id)    
     
-    return jsonify({"msg": "High risk member added successfully"}), 201
+    res = HighRiskMemberSchema().dump(high_risk_member)
+    return jsonify(res), 201
 
 @high_risk_member.delete("/high_risk_member/<member_id>")
 @error_handler()
 def delete_high_risk_member(member_id) -> Response:
-    high_risk_member = db.session.execute(
-        select(HighRiskMember).where(
-            HighRiskMember.user_id==current_user.id,
-            HighRiskMember.member_id==member_id)).scalars().one_or_none()
+    high_risk_member = retrieve_high_risk_member(member_id)
     
     if not high_risk_member:
         app.logger.info(f'High risk member id {member_id} not found | user id: {current_user.id}')
@@ -81,16 +82,12 @@ def update_high_risk_members() -> Response:
             )
     db.session.commit()
 
-    return jsonify({"msg": "High risk members updated successfully"}), 200
+    return get_high_risk_members()
 
 @high_risk_member.get("/high_risk_member/<member_id>")
 @error_handler()
 def get_high_risk_member(member_id) -> Response:
-    high_risk_member = db.session.execute(
-        select(HighRiskMember).where(
-            HighRiskMember.user_id==current_user.id,
-            HighRiskMember.member_id==member_id,
-            HighRiskMember.is_deleted==False)).scalars().one_or_none()
+    high_risk_member = retrieve_high_risk_member(member_id)
     
     if not high_risk_member:
         app.logger.info(f'High risk member id {member_id} not found | user id: {current_user.id}')

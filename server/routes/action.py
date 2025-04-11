@@ -3,25 +3,23 @@ import datetime
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 
 from databases import db, Action, Event
-from databases.schemas import ActionSchema
+from databases.schemas import ActionSchema, EventSchema
 from utils.auth import error_handler
-from utils.action import check_action_exists
+from utils.action import check_action_exists, retrieve_action, retrieve_actions
+from utils.event import retrieve_event
 
 action = Blueprint("action", "__name__")
 
 @action.get("/actions")
 @error_handler()
 def get_actions() -> Response:
-    all_actions = db.session.execute(
-        select(Action).where(
-            Action.user_id == current_user.id,
-            Action.is_deleted==False)).scalars().all()
+    all_actions = retrieve_actions()
     all_actions = ActionSchema(many=True).dump(all_actions)
     
-    return jsonify(all_actions)
+    return jsonify(all_actions), 200
 
 @action.post("/action")
 @error_handler()
@@ -36,15 +34,21 @@ def create_action() -> Response:
     
     db.session.add(Action(**data))
     db.session.commit()
-    return jsonify({"msg": "Add action successful"}), 201
+
+    res = db.session.execute(select(func.LAST_INSERT_ID()))
+    action_id = res.scalar()
+    app.logger.info(f'Action id {action_id} created | user id: {current_user.id}')
+
+    action = retrieve_action(action_id)
+    action = ActionSchema().dump(action)
+
+    return jsonify(action), 201
 
     
 @action.post("/action_to_event/<event_id>/<action_id>")
 @error_handler()
 def apply_action_to_event(event_id, action_id):
-    event = db.session.execute(
-        select(Event).where(
-            Event.id == event_id)).scalars().one_or_none()
+    event = retrieve_event(event_id)
     
     if not event:
         app.logger.info(f'Event id {event_id} not found | user id: {current_user.id}')
@@ -54,16 +58,17 @@ def apply_action_to_event(event_id, action_id):
         app.logger.info(f'Event id {event_id} is already deleted | user id: {current_user.id}')
         return jsonify({"msg": f'Event id {event_id} is already deleted'}), 400
 
-    action = db.session.execute(
-        select(Action).where(
-            Action.user_id == current_user.id,
-            Action.id == action_id)).scalars().one_or_none()
-
+    action = retrieve_action(action_id)
+    
     if action:
         event.action_id = action_id
         event.reviewed_at = datetime.datetime.now(datetime.timezone.utc)
         db.session.commit()
-        return jsonify({"msg": f"Action {action_id} successfully applied to event {event_id}"}), 201
+
+        app.logger.info(f'Action id {action_id} applied to event id {event_id} | user id: {current_user.id}')
+
+        res = EventSchema().dump(event)
+        return jsonify(res), 201
     else:
         app.logger.info(f'Action id {action_id} not found | user id: {current_user.id}')
         return jsonify({"msg": f"Action id {action_id} not found"}), 404
@@ -71,10 +76,7 @@ def apply_action_to_event(event_id, action_id):
 @action.delete("/action/<action_id>")
 @error_handler()
 def delete_action(action_id):
-    action = db.session.execute(
-        select(Action).where(
-            Action.user_id == current_user.id,
-            Action.id == action_id)).scalars().one_or_none()
+    action = retrieve_action(action_id)
     
     if not action:
         app.logger.info(f'Action id {action_id} not found | user id: {current_user.id}')
@@ -111,4 +113,4 @@ def update_action():
             db.session.execute(query)
     db.session.commit()
 
-    return jsonify({"msg": "Update action successful"}), 201
+    return get_actions()

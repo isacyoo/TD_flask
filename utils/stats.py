@@ -27,16 +27,7 @@ class LocationStats:
     def set_stats(self, name, value):
         if hasattr(self.stats, name):
             setattr(self.stats, name, value)
-
-    
-def grab_location_id(user_id, name):
-    location_id = db.session.execute(
-        select(Location.id).where(
-            Location.user_id==user_id,
-            Location.name==name)).scalar_one_or_none()
-    
-    return location_id
-
+            
 
 def get_total_unreviewed_events():
     query = select(func.count()).select_from(Event).join(Location).where(
