@@ -48,6 +48,8 @@ def create_action() -> Response:
 @action.post("/action-to-event/<event_id>/<action_id>")
 @error_handler()
 def apply_action_to_event(event_id, action_id):
+    body = request.json
+    comment = body.get("comment")
     event = retrieve_event(event_id)
     
     if not event:
@@ -63,6 +65,7 @@ def apply_action_to_event(event_id, action_id):
     if action:
         event.action_id = action_id
         event.reviewed_at = datetime.datetime.now(datetime.timezone.utc)
+        event.comment = comment
         db.session.commit()
 
         app.logger.info(f'Action id {action_id} applied to event id {event_id} | user id: {current_user.id}')

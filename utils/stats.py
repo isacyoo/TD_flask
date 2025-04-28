@@ -38,10 +38,8 @@ def get_total_unreviewed_events():
     return db.session.execute(query).scalar()
 
 def get_total_unreviewed_events_per_location():
-    query = select(Location, func.count(Event.id)).select_from(Location).join(Event, isouter=True).where(
-        Location.user_id==current_user.id,
-        Event.deleted_at.is_(None),
-        Event.action_id.is_(None)).group_by(Location.id)
+    query = select(Location, func.count(Event.id)).select_from(Location).join(Event, (Location.id == Event.location_id) & (Event.action_id.is_(None)) & (Event.deleted_at.is_(None)), isouter=True).where(
+        Location.user_id==current_user.id).group_by(Location.id)
     
     res = db.session.execute(query).all()
     

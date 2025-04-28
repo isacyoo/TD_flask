@@ -97,6 +97,7 @@ class Event(db.Model):
     is_merged = db.Column(db.Boolean, default=False)
     action_id = db.Column(db.Integer, db.ForeignKey(Action.id), index=True)
     is_saved = db.Column(db.Boolean, default=False)
+    comment = db.Column(db.String(256), default="")
 
     entries = db.relationship("Entry", back_populates="event", innerjoin=True, lazy="joined")
     location = db.relationship("Location", innerjoin=True, lazy="joined")
