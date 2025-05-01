@@ -79,7 +79,7 @@ def modify_location_schedule(location_id):
     location.operational_hours = new_schedule
     db.session.commit()
 
-    if location.upload_method.value != 'RTSP' or os.environ.get("DEMO_ENVIRONMENT"):
+    if location.upload_method.value != 'RTSP' or os.environ.get("DEMO_ENVIRONMENT") == "1":
         res = LocationSchema().dump(location)
         return jsonify(res), 201
     

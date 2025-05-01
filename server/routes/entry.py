@@ -28,7 +28,7 @@ entry = Blueprint("entry", "__name__")
 @timeit
 @fail_counter
 def entry_webhook() -> Response:
-    if os.environ.get("DEMO_ENVIRONMENT"):
+    if os.environ.get("DEMO_ENVIRONMENT") == "1":
         return jsonify({
             "msg": "This operation is not allowed in a demo environment"
         })
