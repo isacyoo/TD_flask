@@ -10,7 +10,7 @@ from databases.schemas import UserSettingSchema, UpdateUserSettingInputSchema
 users = Blueprint("users", "__name__")
 
 @users.post("/user")
-@error_handler()
+@error_handler(admin=True)
 def create_user() -> Response:
     data = request.get_json()
     db.session.add(User(**data))

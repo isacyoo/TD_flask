@@ -1,6 +1,7 @@
 import json
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
+import os
 
 from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
@@ -27,6 +28,11 @@ entry = Blueprint("entry", "__name__")
 @timeit
 @fail_counter
 def entry_webhook() -> Response:
+    if os.environ.get("DEMO_ENVIRONMENT"):
+        return jsonify({
+            "msg": "This operation is not allowed in a demo environment"
+        })
+    
     data = parse_input_data(request.get_json())
 
     if not data:

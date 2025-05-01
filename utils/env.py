@@ -23,3 +23,5 @@ def set_env_vars():
     os.environ['S3_BUCKET_NAME'] = os.getenv('S3_BUCKET_NAME', 'td.bucket')
     os.environ['VIDEO_CREATION_QUEUE'] = os.getenv('VIDEO_CREATION_QUEUE', 'video-creation')
     os.environ['VIDEO_PROCESSING_QUEUE'] = os.getenv('VIDEO_PROCESSING_QUEUE', 'video-processing')
+
+    os.environ['DEMO_ENVIRONMENT'] = bool(os.getenv('DEMO_ENVIRONMENT', '0') == '1')
