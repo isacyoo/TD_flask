@@ -36,6 +36,7 @@ class User(db.Model):
     review_high_risk_members = db.Column(db.Boolean, default=False)
     
 class Location(db.Model):
+    __table_args__ = (db.UniqueConstraint('user_id', 'name', name='_user_name_uc'),)
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey(User.id), nullable=False)
     name = db.Column(db.String(36), nullable=False)

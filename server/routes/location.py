@@ -73,8 +73,14 @@ def update_location_settings(location_id) -> Response:
     
     for key, value in data.items():
         setattr(location, key, value)
-    
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        if "_user_name_uc" in str(e):
+            app.logger.info(f'Location id {location_id} already exists | user id: {current_user.id}')
+            return jsonify({"msg": f"Location {location_id} already exists"}), 400
+        
     app.logger.info(f'Location id {location_id} updated | user id: {current_user.id}')
     
     res = LocationSchema().dump(location)
