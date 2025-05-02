@@ -19,7 +19,7 @@ def get_actions() -> Response:
     all_actions = retrieve_actions()
     all_actions = ActionSchema(many=True).dump(all_actions)
     
-    return jsonify(all_actions), 200
+    return jsonify({"actions": all_actions}), 200
 
 @action.post("/action")
 @error_handler()

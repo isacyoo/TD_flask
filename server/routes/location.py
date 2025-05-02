@@ -18,7 +18,7 @@ def get_locations() -> Response:
     
     locations = LocationSchema(many=True).dump(locations)
 
-    return jsonify(locations), 200
+    return jsonify({"locations": locations}), 200
 
 @location.get("/location/<location_id>")
 @error_handler()

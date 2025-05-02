@@ -24,7 +24,7 @@ def get_all_unreviewed_events(location_id) -> Response:
     events = db.session.execute(query).unique().scalars()
     events = EventSchema(many=True).dump(events)
 
-    return jsonify(events)
+    return jsonify({"events": events})
 
 @event.get("/unreviewed-events/<location_id>/<int:page>")
 @timeit
@@ -59,7 +59,7 @@ def get_all_history_events(location_id) -> Response:
     events = db.session.execute(query).unique().scalars()
     events = EventSchema(many=True).dump(events)
     
-    return jsonify(events)
+    return jsonify({"events": events})
 
 @event.get("/history-events/<location_id>/<int:page>")
 @timeit
@@ -138,7 +138,7 @@ def get_all_saved_events(location_id) -> Response:
     events = db.session.execute(query).unique().scalars()
     events = EventSchema(many=True).dump(events)
     
-    return jsonify(events)
+    return jsonify({"events": events})
 
 @event.get("/saved-events/<location_id>/<int:page>")
 @error_handler()

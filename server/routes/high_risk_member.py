@@ -17,8 +17,8 @@ high_risk_member = Blueprint("high_risk_member", "__name__")
 def get_high_risk_members() -> Response:
     high_risk_members = retrieve_high_risk_members()
     
-    schema = HighRiskMemberSchema(many=True)
-    return jsonify(schema.dump(high_risk_members)), 200
+    high_risk_members = HighRiskMemberSchema(many=True).dump(high_risk_members)
+    return jsonify({"high_risk_members": high_risk_members}), 200
 
 
 @high_risk_member.post("/high-risk-member/<member_id>")
@@ -93,5 +93,5 @@ def get_high_risk_member(member_id) -> Response:
         app.logger.info(f'High risk member id {member_id} not found | user id: {current_user.id}')
         return jsonify({"msg": "High risk member not found"}), 404
     
-    schema = HighRiskMemberSchema()
-    return jsonify(schema.dump(high_risk_member)), 200
+    high_risk_member = HighRiskMemberSchema().dump(high_risk_member)
+    return jsonify(high_risk_member), 200
