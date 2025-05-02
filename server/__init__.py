@@ -1,4 +1,6 @@
+import os
 from datetime import timedelta
+
 from flask import Flask
 from flask_migrate import Migrate
 from sqlalchemy import select
@@ -24,6 +26,7 @@ def create_app():
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
     app.config["JWT_TOKEN_LOCATION"] = ["headers", "cookies"]
     app.config["JWT_COOKIE_SAMESITE"] = "Strict"
+    app.config["JWT_COOKIE_SECURE"] = os.environ.get("DEMO_ENVIRONMENT", "0") == "1"
     app.config.from_prefixed_env()
     db.init_app(app)
     jwt.init_app(app)
