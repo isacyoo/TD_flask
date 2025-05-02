@@ -19,50 +19,46 @@ class InvalidScheduleException(Exception):
     pass
 
 class SingleRun:
-    def __init__(self, start_time, duration):
+    def __init__(self, start_hour, start_minute, duration):
 
-        self.start_time = time.fromisoformat(start_time)
+        self.start_hour = start_hour
+        self.start_minute = start_minute
         if duration > 24:
             raise InvalidScheduleException('Invalid duration amount')
         
         self.duration = timedelta(hours=duration)
 
     def does_not_overlap_with(self, next, same_day):
-        start = datetime.fromisoformat(
-            self.start_time.strftime("2023-07-08 %H:%M:%S")
-        )
+        start = datetime(2025, 7, 8, self.start_hour, self.start_minute)
         end = start + self.duration
 
         if same_day:
-            next_time = datetime.fromisoformat(
-                next.start_time.strftime("2023-07-08 %H:%M:%S")
-            )
+            next_time = datetime(2025, 7, 8, next.start_hour, next.start_minute)
             return end < next_time
         
         else:
-            next_time = datetime.fromisoformat(
-                next.start_time.strftime("2023-07-09 %H:%M:%S")
-            )
+            next_time = datetime(2025, 7, 9, next.start_hour, next.start_minute)
             return end < next_time
         
     def is_operational_at(self, timestamp, same_day):
         if same_day:
-            start = timestamp.replace(hour=self.start_time.hour,
-                                      minute=self.start_time.minute,
-                                      second=self.start_time.second)
+            start = timestamp.replace(hour=self.start_hour,
+                                      minute=self.start_minute,
+                                      second=0)
             end = start + self.duration
             return start < timestamp < end
         else:
             yesterday = timestamp - timedelta(days=1)
-            start = yesterday.replace(hour=self.start_time.hour,
-                                      minute=self.start_time.minute,
-                                      second=self.start_time.second)
+            start = yesterday.replace(hour=self.start_hour,
+                                      minute=self.start_minute,
+                                      second=0)
             end = start + self.duration
             return start < timestamp < end
         
     def to_dict(self):
         return {
-            "start_time": self.start_time.isoformat(timespec="minutes"),
+            "start_hour": self.start_hour,
+            "start_minute": self.start_minute,
             "duration": self.duration.total_seconds() / 3600
         }
 
@@ -74,7 +70,7 @@ class DaySchedule:
             raise InvalidScheduleException('Invalid schedule')
         
         self.runs.sort(
-            key=lambda run: run.start_time
+            key=lambda run: (run.start_hour, run.start_minute)
         )
 
     def check_valid(self,):
@@ -101,6 +97,7 @@ class DaySchedule:
     
     def to_dict(self):
         return [run.to_dict() for run in self.runs]
+    
 class WeekSchedule:
     day_types = ('mon', 'tue', 'wed', 'thu',
                  'fri', 'sat', 'sun', 'pub')

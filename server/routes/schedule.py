@@ -80,6 +80,9 @@ def modify_location_schedule(location_id):
     db.session.commit()
 
     if location.upload_method.value != 'RTSP' or os.environ.get("DEMO_ENVIRONMENT") == "1":
+        app.logger.info(f'Skip sqs message as the upload method is not RTSP or in demo environment with {current_user.id}')
+        app.logger.info(f'Upload method: {location.upload_method.value}')
+        app.logger.info(f'Demo environment: {os.environ.get("DEMO_ENVIRONMENT")}')
         res = LocationSchema().dump(location)
         return jsonify(res), 201
     
