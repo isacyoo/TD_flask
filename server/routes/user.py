@@ -2,6 +2,7 @@ from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from sqlalchemy import select
 from flask_jwt_extended import current_user
+from marshmallow import ValidationError
 
 from utils.auth import error_handler
 from databases import db, User
@@ -35,7 +36,12 @@ def get_user_settings() -> Response:
 @error_handler()
 def update_user_settings() -> Response:
     user_id = current_user.id
-    data = UpdateUserSettingInputSchema().load(request.get_json())
+    try:
+        data = UpdateUserSettingInputSchema().load(request.get_json())
+    except ValidationError as e:
+        app.logger.info(f'Validation error: {e.messages}')
+        return jsonify({"msg": f'Validation error: {e.messages}'}), 400
+    
     user = db.session.execute(
         select(User).where(
             User.id == user_id)).scalars().one_or_none()

@@ -86,7 +86,7 @@ def modify_location_schedule(location_id):
         res = LocationSchema().dump(location)
         return jsonify(res), 201
     
-    data_retention = location.stream_retention_hours
+    data_retention = location.stream_retention_hours if location.stream_retention_hours else current_user.data_retention_hours
     timezone = current_user.timezone
 
     rtsp_details = [{
