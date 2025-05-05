@@ -7,7 +7,7 @@ from sqlalchemy import select
 from flask_jwt_extended import current_user
 
 from .models import Action, Camera, Location, Video, Entry, Event, db, HighRiskMember, User
-from utils.hours import WeekSchedule, InvalidScheduleException
+from utils.hours import WeekSchedule, InvalidScheduleException, convert_from_UTC
 
 class JSONField(Field):
     def _serialize(self, value, attr, obj, **kwargs):
@@ -19,6 +19,13 @@ class JSONField(Field):
         if isinstance(value, str):
             return json.loads(value)
         return value
+
+class CustomDateTime(DateTime):
+    def _serialize(self, value, attr, obj, **kwargs):
+        if value:
+            value = convert_from_UTC(value, current_user.timezone).replace(tzinfo=None)
+        return super()._serialize(value, attr, obj, **kwargs)
+    
 class ActionSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Action
@@ -49,11 +56,14 @@ class VideoSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Video
 
+    uploaded_at = CustomDateTime(attribute="uploaded_at")
+
 class EntrySchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Entry
 
     videos = Nested(VideoSchema, many=True)
+    entered_at = CustomDateTime(attribute="entered_at")
 
 class EventSchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -63,7 +73,10 @@ class EventSchema(SQLAlchemyAutoSchema):
     entries = Nested(EntrySchema, many=True)
     location = Nested(LocationSchema, only=("id", "name"))
     action = Nested(ActionSchema)
-    entered_at = DateTime(attribute="entered_at")
+    entered_at = CustomDateTime(attribute="entered_at")
+    processed_at = CustomDateTime(attribute="processed_at")
+    reviewed_at = CustomDateTime(attribute="reviewed_at")
+    deleted_at = CustomDateTime(attribute="deleted_at")
 
 class PageInfoSchema(Schema):
     total = Integer()
@@ -120,12 +133,15 @@ class HighRiskMemberSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = HighRiskMember
 
+    created_at = CustomDateTime(attribute="created_at")
 
 class UserSettingSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = User
         fields = ("id", "name", "timezone", "is_admin", "api_key_expiry_date",
                   "video_retention_days", "stream_retention_hours", "review_high_risk_members")
+        
+    api_key_expiry_date = CustomDateTime(attribute="api_key_expiry_date")
         
 
 class UpdateUserSettingInputSchema(Schema):

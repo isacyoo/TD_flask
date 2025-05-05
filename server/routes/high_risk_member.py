@@ -75,6 +75,7 @@ def update_high_risk_members() -> Response:
             member["created_at"] = datetime.datetime.now(datetime.timezone.utc)
             db.session.add(HighRiskMember(**member))
         else:
+            member["created_at"] = datetime.datetime.fromisoformat(member["created_at"])
             db.session.execute(
                 update(HighRiskMember)
                 .where(HighRiskMember.id == member["id"])
