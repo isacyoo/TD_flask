@@ -95,7 +95,7 @@ def reset_api_key():
                                 expires_delta=timedelta(weeks=52))
     hashed_token = sha256_crypt.hash(token, rounds=1000)
     
-    expiry_date = datetime.now(tz=timezone.utc) + timedelta(weeks=52)
+    expiry_date = datetime.now(tz=timezone.utc).replace(microsecond=0) + timedelta(weeks=52)
     current_user.api_key = hashed_token
     current_user.api_key_expiry_date = expiry_date
     db.session.commit()
