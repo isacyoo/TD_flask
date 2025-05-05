@@ -13,7 +13,7 @@ def retrieve_location(location_id):
 def retrieve_locations():
     locations = db.session.execute(
         select(Location).where(
-            Location.user_id == current_user.id)).scalars().all()
+            Location.user_id == current_user.id).order_by(Location.id)).scalars().all()
     
     return locations
 

@@ -53,7 +53,7 @@ def validate_schedule():
     return jsonify({"input_valid": True, "valid": True}), 200
     
 
-@schedule.post('/schedule/<location_id>')
+@schedule.put('/schedule/<location_id>')
 @error_handler()
 def modify_location_schedule(location_id):
     location = db.session.execute(

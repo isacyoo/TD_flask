@@ -1,263 +1,45 @@
 openapi: 3.1.0
 info:
-  title: TD Flask API
+  title: TAILDET-AI API reference
   version: 1.0.0
-  description: API documentation for TD Flask application
-
-servers:
-  - url: http://localhost:5000
-
+  description: API documentation for the TAILDET-AI system.
 paths:
-  /all_unreviewed_events/{location_id}:
-    get:
-      summary: Get all unreviewed events for a location
-      parameters:
-        - name: location_id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: personId
-          in: query
-          schema:
-            type: string
-        - name: time
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: A list of unreviewed events
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Event'
-        '404':
-          description: No events found
-
-  /unreviewed_events/{location_id}/{page}:
-    get:
-      summary: Get paginated unreviewed events for a location
-      parameters:
-        - name: location_id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: page
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: personId
-          in: query
-          schema:
-            type: string
-        - name: time
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: A paginated list of unreviewed events
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  events:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Event'
-                  total:
-                    type: integer
-                  page:
-                    type: integer
-                  pages:
-                    type: integer
-                  per_page:
-                    type: integer
-                  iter_pages:
-                    type: array
-                    items:
-                      type: integer
-        '404':
-          description: No events found
-
-  /all_history_events/{location_id}:
-    get:
-      summary: Get all history events for a location
-      parameters:
-        - name: location_id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: actionId
-          in: query
-          schema:
-            type: array
-            items:
-              type: string
-        - name: personId
-          in: query
-          schema:
-            type: string
-        - name: time
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: A list of history events
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Event'
-        '404':
-          description: No events found
-
-  /history_events/{location_id}/{page}:
-    get:
-      summary: Get paginated history events for a location
-      parameters:
-        - name: location_id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: page
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: actionId
-          in: query
-          schema:
-            type: array
-            items:
-              type: string
-        - name: personId
-          in: query
-          schema:
-            type: string
-        - name: time
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: A paginated list of history events
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  events:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Event'
-                  total:
-                    type: integer
-                  page:
-                    type: integer
-                  pages:
-                    type: integer
-                  per_page:
-                    type: integer
-                  iter_pages:
-                    type: array
-                    items:
-                      type: integer
-        '404':
-          description: No events found
-
-  /adjacent_events/{id}:
-    get:
-      summary: Get adjacent events for an event
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: actionId
-          in: query
-          schema:
-            type: string
-        - name: personId
-          in: query
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Adjacent events
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  next_event:
-                    type: string
-                  previous_event:
-                    type: string
-        '404':
-          description: Event not found
-
-  /event/{id}:
-    get:
-      summary: Get an event by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: An event
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Event'
-        '404':
-          description: Event not found
-
-  /video/{id}:
-    get:
-      summary: Generate a presigned URL for a video
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Presigned URL
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  url:
-                    type: string
-        '404':
-          description: Video not found
-
-  /set_video_status/{id}:
+  /reset-api-key:
     post:
-      summary: Set the status of a video
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+      summary: Reset API key
+      tags:
+        - User
+      responses:
+        '201':
+          description: API key reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                  api_key:
+                    type: string
+                  expiry_date:
+                    type: string
+                    format: date-time
+  /user-settings:
+    get:
+      summary: Get account-level settings
+      tags:
+        - User
+      responses:
+        '200':
+          description: User settings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      summary: Update account-level settings
+      tags:
+        - User
       requestBody:
         required: true
         content:
@@ -265,188 +47,155 @@ paths:
             schema:
               type: object
               properties:
-                status:
-                  type: string
-      responses:
-        '201':
-          description: Video status updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  video_id:
-                    type: string
-                  original_status:
-                    type: string
-                  new_status:
-                    type: string
-        '400':
-          description: Invalid status provided
-        '404':
-          description: Video not found
-
-  /confirm_upload/{id}:
-    post:
-      summary: Confirm the upload of a video
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '201':
-          description: Upload success
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  msg:
-                    type: string
-        '404':
-          description: Video not found
-
-  /check_video_exists/{id}:
-    get:
-      summary: Check if a video exists
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+                video_retention_days:
+                  type: integer
+                stream_retention_hours:
+                  type: integer
+                review_high_risk_members:
+                  type: boolean
       responses:
         '200':
-          description: Video existence status
+          description: User settings updated
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  exists:
-                    type: boolean
-
-  /user:
-    post:
-      summary: Create a new user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
-      responses:
-        '201':
-          description: User created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  msg:
-                    type: string
-
+                $ref: '#/components/schemas/User'
   /locations:
     get:
-      summary: Get all locations for the current user
+      summary: Get all locations
+      tags:
+        - Location
       responses:
         '200':
-          description: A list of locations
+          description: All locations retrieved
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Location'
-
+                type: object
+                properties:
+                  locations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Location'
   /location/{location_id}:
     get:
-      summary: Get a location by ID
+      summary: Get location by ID
+      tags:
+        - Location
       parameters:
-        - name: location_id
-          in: path
+        - in: path
+          name: location_id
           required: true
           schema:
-            type: integer
+            type: string
       responses:
         '200':
-          description: A location
+          description: Information about the location
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Location'
         '404':
           description: Location not found
-
-  /location_id/{name}:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /location-id/{name}:
     get:
-      summary: Get a location ID by name
+      summary: Get location ID by name
+      tags:
+        - Location
       parameters:
-        - name: name
-          in: path
+        - in: path
+          name: name
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Location ID
+          description: Location ID for the given name
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   location_id:
-                    type: string
+                    type: integer
         '404':
           description: Location not found
-
-  /current_stats:
-    get:
-      summary: Get current statistics
-      parameters:
-        - name: hours
-          in: query
-          schema:
-            type: integer
-            default: 24
-      responses:
-        '200':
-          description: Current statistics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Stats'
-
-  /entry:
-    post:
-      summary: Create a new entry
+                $ref: '#/components/schemas/Error'
+  /current-stats:
+    get:
+      summary: Get real-time analytics of all locations
+      tags:
+        - Stats
+      parameters:
+        - in: query
+          name: hours
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Stats retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+  /location-settings/{location_id}:
+    put:
+      summary: Update location-level settings
+      tags:
+        - Location
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EntryWebhookInputData'
+              $ref: '#/components/schemas/Location'
       responses:
-        '201':
-          description: Entry created
+        '200':
+          description: Location-level setting updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntryWebhookResponse'
-        '400':
-          description: Invalid JSON body
-
-  /set_entry_status/{id}:
-    post:
-      summary: Set the status of an entry
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+                $ref: '#/components/schemas/Location'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /actions:
+    get:
+      summary: Get all actions
+      tags:
+        - Action
+      responses:
+        '200':
+          description: List of actions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Action'
+    put:
+      summary: Update actions
+      tags:
+        - Action
       requestBody:
         required: true
         content:
@@ -454,96 +203,54 @@ paths:
             schema:
               type: object
               properties:
-                status:
-                  type: string
+                actions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Action'
       responses:
-        '201':
-          description: Entry status updated
+        '200':
+          description: Actions updated
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  video_id:
-                    type: string
-                  original_status:
-                    type: string
-                  new_status:
-                    type: string
-        '400':
-          description: Invalid status provided
-        '404':
-          description: Entry not found
-
-  /actions:
-    get:
-      summary: Get all actions for the current user
-      responses:
-        '200':
-          description: A list of actions
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Action'
-
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Action'
+  /action:
     post:
-      summary: Create new actions
+      summary: Create action
+      tags:
+        - Action
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: array
-              items:
+              $ref: '#/components/schemas/Action'
+      responses:
+        '201':
+          description: Action created
+          content:
+            application/json:
+              schema:
                 $ref: '#/components/schemas/Action'
-      responses:
-        '201':
-          description: Actions created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  msg:
-                    type: string
-
-  /action_to_event/{event_id}/{action_id}:
-    post:
-      summary: Apply an action to an event
-      parameters:
-        - name: event_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: action_id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '201':
-          description: Action applied to event
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  msg:
-                    type: string
-        '404':
-          description: Event or action not found
         '400':
-          description: Event is deleted
-
-  /delete_action/{action_id}:
-    post:
-      summary: Delete an action
+          description: Action name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /action/{action_id}:
+    delete:
+      summary: Delete action
+      tags:
+        - Action
       parameters:
-        - name: action_id
-          in: path
+        - in: path
+          name: action_id
           required: true
           schema:
             type: string
@@ -558,13 +265,204 @@ paths:
                   msg:
                     type: string
         '404':
-          description: Action not found
-        '400':
-          description: Action has associated events
-
-  /update_actions:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /action-to-event/{event_id}/{action_id}:
     post:
-      summary: Update actions
+      summary: Apply action to event
+      tags:
+        - Action
+        - Event
+      parameters:
+        - in: path
+          name: event_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: action_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Action applied to the event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Either action or event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /entry:
+    post:
+      summary: Webhook called upon member entry
+      tags:
+        - Entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryWebhookInput'
+      responses:
+        '201':
+          description: Entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryWebhookResponse'
+        '400':
+          description: Invalid JSON body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /video/{id}:
+    get:
+      summary: Generate video URL
+      tags:
+        - Video
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Video presigned URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        '404':
+          description: Video not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /schedule/{location_id}:
+    get:
+      summary: Get location schedule
+      tags:
+        - Schedule
+        - Location
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Schedule of the location retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/Schedule'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Modify schedule for a location
+      tags:
+        - Schedule
+        - Location
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '201':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/Location'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /validate-schedule:
+    post:
+      summary: Validate schedule
+      tags:
+        - Schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  input_valid:
+                    type: boolean
+  /high-risk-members:
+    get:
+      summary: Get all high risk members
+      tags:
+        - HighRiskMember
+      responses:
+        '200':
+          description: List of high risk members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HighRiskMember'
+    put:
+      summary: Update high risk members
+      tags:
+        - HighRiskMember
       requestBody:
         required: true
         content:
@@ -572,13 +470,82 @@ paths:
             schema:
               type: object
               properties:
-                actions:
+                members:
                   type: array
                   items:
-                    $ref: '#/components/schemas/Action'
+                    $ref: '#/components/schemas/HighRiskMember'
+      responses:
+        '200':
+          description: High risk members updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HighRiskMember'
+  /high-risk-member/{member_id}:
+    get:
+      summary: Get high risk member by ID
+      tags:
+        - HighRiskMember
+      parameters:
+        - in: path
+          name: member_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: High risk member info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HighRiskMember'
+        '404':
+          description: High risk member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create high risk member
+      tags:
+        - HighRiskMember
+      parameters:
+        - in: path
+          name: member_id
+          required: true
+          schema:
+            type: string
       responses:
         '201':
-          description: Actions updated
+          description: High risk member created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HighRiskMember'
+        '400':
+          description: High risk member already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete high risk member
+      tags:
+        - HighRiskMember
+      parameters:
+        - in: path
+          name: member_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
           content:
             application/json:
               schema:
@@ -586,7 +553,321 @@ paths:
                 properties:
                   msg:
                     type: string
-
+        '404':
+          description: High risk member not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /unreviewed-events/{location_id}:
+    get:
+      summary: Get all unreviewed events for a location
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: memberId
+          schema:
+            type: string
+        - in: query
+          name: time
+          schema:
+            type: string
+            enum: [12h, 1d, 2d, 5d, 1w, 2w, 4w]
+      responses:
+        '200':
+          description: List of unreviewed events for the location
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+  /unreviewed-events/{location_id}/{page}:
+    get:
+      summary: Get paginated unreviewed events for a location
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: page
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: memberId
+          schema:
+            type: string
+        - in: query
+          name: time
+          schema:
+            type: string
+            enum: [12h, 1d, 2d, 5d, 1w, 2w, 4w]
+      responses:
+        '200':
+          description: Paginated unreviewed events for the location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWithPageInfo'
+        '404':
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /history-events/{location_id}:
+    get:
+      summary: Get all history events for a location
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: actionId
+          schema:
+            type: string
+        - in: query
+          name: memberId
+          schema:
+            type: string
+        - in: query
+          name: time
+          schema:
+            type: string
+            enum: [12h, 1d, 2d, 5d, 1w, 2w, 4w]
+      responses:
+        '200':
+          description: List of history events for the location
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+  /history-events/{location_id}/{page}:
+    get:
+      summary: Get paginated history events for a location
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: page
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: actionId
+          schema:
+            type: string
+        - in: query
+          name: memberId
+          schema:
+            type: string
+        - in: query
+          name: time
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated history events for the location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWithPageInfo'
+        '404':
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /saved-events/{location_id}:
+    get:
+      summary: Get all saved events for a location
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: memberId
+          schema:
+            type: string
+        - in: query
+          name: time
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of saved events for the location
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+  /saved-events/{location_id}/{page}:
+    get:
+      summary: Get paginated saved events for a location
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: location_id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: page
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: memberId
+          schema:
+            type: string
+        - in: query
+          name: time
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated saved events for the location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWithPageInfo'
+        '404':
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'                
+  /adjacent-events/{id}:
+    get:
+      summary: Get adjacent events for navigation within the review page
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: actionId
+          schema:
+            type: string
+        - in: query
+          name: memberId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Adjacent events for the given event
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  next_event:
+                    type: string
+                  previous_event:
+                    type: string
+        '404':
+          description: Given event id not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /event/{id}:
+    get:
+      summary: Get event by ID
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Event info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /event-save-status/{id}:
+    put:
+      summary: Update event save status
+      tags:
+        - Event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                save:
+                  type: boolean
+      responses:
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
     User:
@@ -596,84 +877,114 @@ components:
           type: string
         name:
           type: string
-        password:
+        timezone:
           type: string
-        api_key:
-          type: string
+        is_admin:
+          type: boolean
         api_key_expiry_date:
           type: string
           format: date-time
-        is_admin:
-          type: boolean
-        video_retention_period:
+        video_retention_days:
           type: integer
-        timezone:
-          type: string
-
+        stream_retention_hours:
+          type: integer
+        review_high_risk_members:
+          type: boolean
     Location:
       type: object
       properties:
         id:
           type: integer
+        user_id:
+          type: string
         name:
           type: string
         upload_method:
           type: string
+          enum: [UserUpload, RTSP, Custom]
         custom_upload_method:
           type: string
         operational_hours:
           type: object
+          $ref: '#/components/schemas/Schedule'
+        video_retention_days:
+          type: integer
         stream_retention_hours:
           type: integer
+        review_high_risk_members:
+          type: boolean
         cameras:
           type: array
           items:
             $ref: '#/components/schemas/Camera'
-
     Camera:
       type: object
       properties:
         id:
           type: integer
+        location_id:
+          type: integer
+        display_order:
+          type: integer
         name:
           type: string
-
-    Video:
-      type: object
-      properties:
-        id:
+        threshold:
+          type: number
+        minimum_time:
+          type: number
+        x1:
+          type: number
+        y1:
+          type: number
+        x2:
+          type: number
+        y2:
+          type: number
+        x3:
+          type: number
+        y3:
+          type: number
+        x4:
+          type: number
+        y4:
+          type: number
+        nx:
+          type: number
+        ny:
+          type: number
+        stream_url:
           type: string
-        camera_id:
+        offset_amount:
           type: integer
-        entry_id:
-          type: string
-        status:
-          type: string
-        uploaded_at:
-          type: string
-          format: date-time
-
-    Entry:
+    Action:
       type: object
       properties:
         id:
+          type: integer
+        user_id:
           type: string
-        event_id:
+        name:
           type: string
-        person_id:
+        is_tailgating:
+          type: boolean
+        is_enabled:
+          type: boolean
+        is_deleted:
+          type: boolean
+    HighRiskMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
           type: string
-        person_meta:
-          type: object
-        entered_at:
+        member_id:
+          type: string
+        is_deleted:
+          type: boolean
+        created_at:
           type: string
           format: date-time
-        status:
-          type: string
-        videos:
-          type: array
-          items:
-            $ref: '#/components/schemas/Video'
-
     Event:
       type: object
       properties:
@@ -694,57 +1005,111 @@ components:
           type: boolean
         action_id:
           type: integer
+        is_saved:
+          type: boolean
+        comment:
+          type: string
         entries:
           type: array
           items:
             $ref: '#/components/schemas/Entry'
         location:
-          type: object
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
+          $ref: '#/components/schemas/Location'
         action:
-          type: object
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
+          $ref: '#/components/schemas/Action'
         entered_at:
           type: string
           format: date-time
-
-    Action:
+    Entry:
       type: object
       properties:
         id:
+          type: string
+        event_id:
+          type: string
+        member_id:
+          type: string
+        member_meta:
+          type: object
+        entered_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Video'
+    Video:
+      type: object
+      properties:
+        id:
+          type: string
+        camera_id:
           type: integer
-        user_id:
+        entry_id:
           type: string
-        name:
+        status:
           type: string
-        is_tailgating:
-          type: boolean
-        is_enabled:
-          type: boolean
-        is_deleted:
-          type: boolean
-
-    EntryWebhookInputData:
+        uploaded_at:
+          type: string
+          format: date-time
+    Run:
+      type: object
+      properties:
+        start_hour:
+          type: integer
+        start_minute:
+          type: integer
+        duration:
+          type: integer
+    Schedule:
+      type: object
+      properties:
+        mon:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        tue:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        wed:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        thu:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        fri:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        sat:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        sun:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+        pub:
+          type: array
+          items:
+            $ref: '#/components/schemas/Run'
+    EntryWebhookInput:
       type: object
       properties:
         location_id:
           type: integer
-        person_id:
+        member_id:
           type: string
         entered_at:
           type: string
           format: date-time
         person_meta:
           type: object
-
     EntryWebhookResponse:
       type: object
       properties:
@@ -753,14 +1118,32 @@ components:
         videos:
           type: array
           items:
-            type: object
-            properties:
-              video_id:
-                type: string
-              presigned_url:
-                type: string
-
+            $ref: '#/components/schemas/VideoPresignedUrl'
+    VideoPresignedUrl:
+      type: object
+      properties:
+        presigned_url:
+          type: string
+          format: uri
+        video_id:
+          type: string
     Stats:
+      type: object
+      properties:
+        unreviewed:
+          type: integer
+        entries:
+          type: integer
+        in_process:
+          type: integer
+    LocationStats:
+      type: object
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        stats:
+          $ref: '#/components/schemas/Stats'
+    StatsResponse:
       type: object
       properties:
         total_unreviewed:
@@ -768,16 +1151,33 @@ components:
         location_stats:
           type: array
           items:
-            type: object
-            properties:
-              location:
-                $ref: '#/components/schemas/Location'
-              stats:
-                type: object
-                properties:
-                  unreviewed:
-                    type: integer
-                  entries:
-                    type: integer
-                  in_process:
-                    type: integer
+            $ref: '#/components/schemas/LocationStats'
+    PageInfo:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        pages:
+          type: integer
+        per_page:
+          type: integer
+        iter_pages:
+          type: array
+          items:
+            type: integer
+    EventWithPageInfo:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        page_info:
+          $ref: '#/components/schemas/PageInfo'
+    Error:
+      type: object
+      properties:
+        msg:
+          type: string

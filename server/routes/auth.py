@@ -10,6 +10,7 @@ from sqlalchemy import select
 from utils.auth import validate_login, error_handler
 from utils.misc import has_all_keys
 from databases import db, User
+from databases.schemas import UserSettingSchema
 
 auth = Blueprint("auth", "__name__")
 
@@ -80,10 +81,10 @@ def reset_password() -> Response:
     
     return jsonify({"msg": "Password reset successful"}), 201
 
-@auth.get("/user-info") 
+@auth.get("/session") 
 @error_handler()
 def get_user_info() -> Response:
-    return jsonify({"id":current_user.id, "name":current_user.name, "role": 'ADMIN' if current_user.is_admin else 'USER'})
+    return jsonify(UserSettingSchema().dump(current_user)), 200
 
 @auth.post("/reset-api-key")
 @error_handler()

@@ -67,7 +67,7 @@ class Camera(db.Model):
     y4 = db.Column(db.Float)
     nx = db.Column(db.Float)
     ny = db.Column(db.Float)
-    stream_url = db.Column(db.String(256), nullable=False)
+    stream_url = db.Column(db.String(256))
     offset_amount = db.Column(db.Integer, default=0)
 
     location = db.relationship("Location", back_populates="cameras", innerjoin=True)

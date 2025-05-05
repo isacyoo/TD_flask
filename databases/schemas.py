@@ -129,9 +129,9 @@ class UserSettingSchema(SQLAlchemyAutoSchema):
         
 
 class UpdateUserSettingInputSchema(Schema):
-    video_retention_days = Integer(required=True)
-    stream_retention_hours = Integer(required=True)
-    review_high_risk_members = Boolean(required=True)
+    video_retention_days = Integer()
+    stream_retention_hours = Integer()
+    review_high_risk_members = Boolean()
 
 class UpdateLocationSettingInputSchema(Schema):
     name = String()
