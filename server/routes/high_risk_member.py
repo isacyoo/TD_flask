@@ -4,6 +4,7 @@ from flask import Blueprint, request, Response, jsonify
 from flask import current_app as app
 from flask_jwt_extended import current_user
 from sqlalchemy import select, update, func
+from sqlalchemy.exc import OperationalError
 
 from databases import db, HighRiskMember
 from databases.schemas import HighRiskMemberSchema
@@ -36,10 +37,18 @@ def create_high_risk_member(member_id) -> Response:
     db.session.commit()
 
     app.logger.info(f'High risk member id {member_id} created | user id: {current_user.id}')
-
-    res = db.session.execute(select(func.LAST_INSERT_ID()))
-    high_risk_member_id = res.scalar()
-    high_risk_member = retrieve_high_risk_member(high_risk_member_id)    
+    
+    try:
+        res = db.session.execute(select(func.LAST_INSERT_ID()))
+        high_risk_member_id = res.scalar()
+        high_risk_member = retrieve_high_risk_member(high_risk_member_id)    
+    except OperationalError:
+        app.logger.info("SQLite does not support LAST_INSERT_ID()")
+        high_risk_member = db.session.execute(
+            select(HighRiskMember).where(HighRiskMember.user_id==current_user.id,
+                                         HighRiskMember.member_id==member_id,
+                                         HighRiskMember.is_deleted==False)
+        ).scalar_one_or_none()
     
     res = HighRiskMemberSchema().dump(high_risk_member)
     return jsonify(res), 201
