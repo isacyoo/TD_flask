@@ -34,7 +34,18 @@ class User(db.Model):
     stream_retention_hours = db.Column(db.Integer, default=24)
     timezone = db.Column(db.String(40), default='Pacific/Auckland')
     review_high_risk_members = db.Column(db.Boolean, default=False)
-    
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+
+class Organization(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    email = db.Column(db.String(100), nullable=False, unique=True)
+    phone = db.Column(db.String(20), nullable=False, unique=True)
+    address = db.Column(db.String(200), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)
+
 class Location(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'name', name='_user_name_uc'),)
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
