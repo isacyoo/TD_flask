@@ -11,9 +11,17 @@ def get_secret(key):
 
 def get_default_db_uri(demo=False):
     if demo:
+        s3 = boto3.client('s3')
+        demo_db_bucket = os.getenv('S3_BUCKET_NAME', 'td.bucket')
+        demo_db_key = os.getenv('DEMO_DB_KEY', 'demo/demo.db')
+        if demo_db_bucket and demo_db_key:
+            if not os.path.exists('./instance/demo.db'):
+                os.mkdir('./instance')
+                s3.download_file(demo_db_bucket, demo_db_key, './instance/demo.db')
+
         return 'sqlite:///demo.db'
     else:
-        get_secret('SQLALCHEMY_DATABASE_URI')
+        return get_secret('SQLALCHEMY_DATABASE_URI')
 
 def set_env_vars():
     if os.path.exists('./.env'):
