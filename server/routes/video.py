@@ -31,7 +31,7 @@ def generate_video_url(id):
     try:
         url = s3_client.generate_presigned_url('get_object',
                                                 Params={'Bucket':os.getenv('S3_BUCKET_NAME'),
-                                                        'Key':f'videos/{video.id}.mp4'},
+                                                        'Key':f'resized/hd/{video.id}.mp4'},
                                                 ExpiresIn=3600) 
         return jsonify({"url": url})
     except Exception as e:
