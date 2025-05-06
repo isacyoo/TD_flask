@@ -16,7 +16,7 @@ def get_default_db_uri(demo=False):
         demo_db_key = os.getenv('DEMO_DB_KEY', 'demo/demo.db')
         if demo_db_bucket and demo_db_key:
             if not os.path.exists('./instance/demo.db'):
-                os.mkdir('./instance')
+                os.makedirs('./instance', exist_ok=True)
                 s3.download_file(demo_db_bucket, demo_db_key, './instance/demo.db')
 
         return 'sqlite:///demo.db'
