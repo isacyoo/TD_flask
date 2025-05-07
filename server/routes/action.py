@@ -110,6 +110,15 @@ def update_action():
             action = Action(**action)
             db.session.add(action)
         else:
+            if action["is_deleted"]:
+                action_events = db.session.execute(
+                    select(Event).where(
+                        Event.action_id == action["id"],
+                        Event.deleted_at.is_(None))).unique().scalars().all()
+                if action_events:
+                    app.logger.info(f'Action id {action["id"]} has associated events | user id: {current_user.id}')
+                    return jsonify({"msg": f"Action has associated events"}), 400
+
             query = update(Action).where(
                 Action.user_id == current_user.id,
                 Action.id == action["id"]).values(**action)
